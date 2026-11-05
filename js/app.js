@@ -1,4 +1,4 @@
-import { load, save, flush, loadPhotos, putPhoto, delPhoto, clearPhotos } from './store.js';
+import { load, save, flush, loadPhotos, putPhoto, delPhoto, clearPhotos, onBlocked } from './store.js';
 import { seed, ADDONS, SEED_VERSION } from './seed.js';
 import { SPRITE, PICTOS, picto, logo } from './pictos.js';
 
@@ -1592,6 +1592,11 @@ function movePhotos() {
 /* ---------- Démarrage ---------- */
 (async function init() {
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
+  onBlocked(() => {
+    app.innerHTML = `<div class="empty"><strong>Mise à jour en attente</strong>
+      <p>Workout Log est encore ouvert dans un autre onglet ou une autre fenêtre avec l'ancienne version. Ferme‑le : l'app s'ouvrira automatiquement ici, sans perdre tes données.</p>
+      <button class="btn sm" onclick="location.reload()">Réessayer</button></div>`;
+  });
   const [stored, ph] = await Promise.all([load(), loadPhotos()]);
   photos = ph;
   S = stored && Array.isArray(stored.exercises) ? migrate(stored) : seed();

@@ -7,6 +7,10 @@ const PHOTOS = 'photos';   // photos rangées à part : la sauvegarde de l'état
 const KEY = 'state';
 
 let dbPromise = null;
+let blockedHandler = null;
+// Appelé si une autre fenêtre de l'app (ancienne version) garde la base ouverte pendant une mise à jour
+export function onBlocked(fn) { blockedHandler = fn; }
+
 function openDb() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
@@ -16,7 +20,13 @@ function openDb() {
         if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
         if (!db.objectStoreNames.contains(PHOTOS)) db.createObjectStore(PHOTOS);
       };
-      req.onsuccess = () => resolve(req.result);
+      req.onblocked = () => blockedHandler?.();
+      req.onsuccess = () => {
+        const db = req.result;
+        // Une version plus récente ouverte ailleurs demande la base : on la libère et on recharge.
+        db.onversionchange = () => { db.close(); location.reload(); };
+        resolve(db);
+      };
       req.onerror = () => reject(req.error);
     });
   }
