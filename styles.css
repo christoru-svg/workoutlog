@@ -394,3 +394,14 @@ button.chip { min-height: 34px; }
 .obdots i.past { background: var(--accent-2); }
 .obdots i.on { background: var(--accent); }
 .obnav .btn { flex: 1; }
+
+/* Groupes musculaires */
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.tag { font-size: .7rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--sunk); color: var(--muted); }
+.tag.prim { background: var(--accent-soft); color: var(--accent); }
+.mchips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px; scroll-padding-inline: 16px; }
+.mchips::-webkit-scrollbar { display: none; }
+.mchip { flex: none; min-height: 38px; padding: 0 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: .88rem; font-weight: 600; white-space: nowrap; }
+.mchip span { color: var(--muted); font-family: var(--f-mono); font-size: .78rem; margin-left: 2px; }
+.mchip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.mchip.on span { color: var(--on-accent); opacity: .8; }

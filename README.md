@@ -28,7 +28,7 @@ Aucune dépendance et aucune étape de build : ce sont des fichiers statiques (H
   - **Bilan** : totaux, séances par semaine avec l'objectif, semaine en cours, douleur au réveil et pistes à surveiller, poids, dernière séance ;
   - **Historique** : chaque séance série par série, comparée à la fois précédente.
 - **Plus** :
-  - **bibliothèque d'exercices** : pictogramme ou photo, statut kiné modifiable et daté ;
+  - **bibliothèque d'exercices** : groupes musculaires (tags et filtre), pictogramme ou photo, statut kiné modifiable et daté ;
   - **réglages** : seuil de douleur, temps de repos, export et import JSON, réinitialisation.
 - **Progression** : +2,5 kg proposé seulement après deux séances « faciles » avec des lendemains sous le seuil.
 

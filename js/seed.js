@@ -3,6 +3,31 @@
 
 const now = Date.now();
 
+// Groupes musculaires (le premier est le groupe principal)
+export const MUSCLES = {
+  dos: 'Dos', pecs: 'Pectoraux', epaules: 'Épaules', biceps: 'Biceps', triceps: 'Triceps',
+  abdos: 'Abdos', obliques: 'Obliques', lombaires: 'Lombaires', fessiers: 'Fessiers', jambes: 'Jambes', mobilite: 'Mobilité',
+};
+export const SEED_MUSCLES = {
+  mob: ['mobilite', 'lombaires'],
+  lat: ['dos', 'biceps'],
+  row: ['dos', 'biceps'],
+  face: ['epaules', 'dos'],
+  curl: ['biceps'],
+  dead: ['abdos'],
+  bird: ['lombaires', 'abdos', 'fessiers'],
+  plank: ['abdos', 'epaules'],
+  ext: ['lombaires', 'fessiers'],
+  bench: ['pecs', 'triceps', 'epaules'],
+  ohp: ['epaules', 'triceps'],
+  fly: ['pecs'],
+  tri: ['triceps'],
+  side: ['obliques', 'abdos'],
+  pallof: ['obliques', 'abdos'],
+  twist: ['obliques', 'abdos'],
+  superman: ['lombaires', 'fessiers', 'dos'],
+};
+
 function ex(id, name, equip, picto, extra = {}) {
   return {
     id, name, equip, picto,
@@ -18,6 +43,7 @@ function ex(id, name, equip, picto, extra = {}) {
     cue: '',
     photo: null,
     history: [{ date: now, from: null, to: 'ok', reason: 'Programme de départ validé par la kiné' }],
+    muscles: [...(SEED_MUSCLES[id] || [])],
     ...extra,
   };
 }
@@ -44,7 +70,7 @@ export const ADDONS = [
   { v: 2, make: twist, tpl: 'tB', before: 'dead' },
   { v: 3, make: superman, tpl: 'tA', before: 'ext' },
 ];
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 export function seed() {
   return {

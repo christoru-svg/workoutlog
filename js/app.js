@@ -1,5 +1,5 @@
 import { load, save, flush, loadPhotos, putPhoto, delPhoto, clearPhotos, onBlocked } from './store.js';
-import { seed, ADDONS, SEED_VERSION } from './seed.js';
+import { seed, ADDONS, SEED_VERSION, MUSCLES, SEED_MUSCLES } from './seed.js';
 import { SPRITE, PICTOS, picto, logo } from './pictos.js';
 
 const app = document.getElementById('app');
@@ -9,6 +9,7 @@ const toastEl = document.getElementById('toast');
 let S = null;          // état complet de l'app
 let sheetCtx = {};     // données temporaires du panneau ouvert
 let exFilter = 'all';  // filtre de la liste d'exercices
+let muscleFilter = 'all'; // filtre par groupe musculaire
 let photos = new Map(); // photos des exercices, chargées à part (id → data URL)
 
 /* ---------- Utilitaires ---------- */
@@ -224,6 +225,9 @@ function render() {
   const bare = inSession || r.v === 'onboarding';
   app.className = inSession ? 'in-session' : r.v === 'onboarding' ? 'onb' : '';
   app.innerHTML = html + (bare ? '' : tabbar(r.v));
+  // Garde le filtre musculaire actif visible dans sa rangée défilante
+  const on = app.querySelector('.mchip.on');
+  if (on) on.parentElement.scrollLeft = on.offsetLeft - on.parentElement.offsetLeft - 16;
   keepAwake(inSession);
 }
 
@@ -796,18 +800,33 @@ function vLogDetail(id) {
 }
 
 /* Exercices */
+function muscleTags(e, max = 3) {
+  const m = (e.muscles || []).filter((k) => MUSCLES[k]);
+  if (!m.length) return '';
+  return `<span class="tags">${m.slice(0, max).map((k, i) => `<span class="tag ${i === 0 ? 'prim' : ''}">${MUSCLES[k]}</span>`).join('')}${m.length > max ? `<span class="tag">+${m.length - max}</span>` : ''}</span>`;
+}
+
 function vExercises() {
   const filters = [['all', 'Tous'], ['ok', 'Validés'], ['warn', 'Précaution'], ['stop', 'À éviter']];
-  const list = S.exercises.filter((e) => exFilter === 'all' || e.status === exFilter).sort(byName);
+  const byStatus = S.exercises.filter((e) => exFilter === 'all' || e.status === exFilter);
+  const count = (k) => byStatus.filter((e) => (k === 'none' ? !(e.muscles || []).length : (e.muscles || []).includes(k))).length;
+  const groups = Object.keys(MUSCLES).filter((k) => count(k) > 0);
+  if (byStatus.some((e) => !(e.muscles || []).length)) groups.push('none');
+  if (muscleFilter !== 'all' && !groups.includes(muscleFilter)) muscleFilter = 'all';
+  const list = byStatus
+    .filter((e) => muscleFilter === 'all' || (muscleFilter === 'none' ? !(e.muscles || []).length : (e.muscles || []).includes(muscleFilter)))
+    .sort(byName);
   const usedIn = (e) => S.templates.filter((t) => t.items.includes(e.id)).map((t) => t.letter || t.name);
   const rows = list.map((e) => {
     const u = usedIn(e);
     return `<div class="exrow split ${e.status === 'stop' ? 'stopped' : ''}"><button class="main" data-act="exEdit" data-id="${e.id}" aria-label="Modifier ${esc(e.name)}">${thumb(e, 'thumb sm')}
-      <span class="t" style="text-align:left"><strong>${esc(exName(e))}</strong><span class="mono">${fmtTarget(e)}${u.length ? ' · ' + u.map(esc).join(', ') : ''}</span></span></button>
+      <span class="t" style="text-align:left"><strong>${esc(exName(e))}</strong><span class="mono">${fmtTarget(e)}${u.length ? ' · ' + u.map(esc).join(', ') : ''}</span>${muscleTags(e)}</span></button>
       <button class="stbtn ${e.status}" data-act="exStatus" data-id="${e.id}" aria-label="Statut : ${STATUS[e.status].label}. Changer"><span class="dot"></span>${e.status === 'ok' ? 'Validé' : e.status === 'warn' ? 'Précaution' : 'À éviter'}</button></div>`;
   }).join('');
+  const mchip = (k, label, n) => `<button class="mchip ${muscleFilter === k ? 'on' : ''}" data-act="muscleFilter" data-v="${k}" aria-pressed="${muscleFilter === k}">${label}${n != null ? ` <span>${n}</span>` : ''}</button>`;
   return `<div class="stack"><div class="top"><a class="iconbtn" href="#more" aria-label="Retour">${I.back}</a><h1 class="h1">Exercices</h1></div>
     <div class="segb-row" style="grid-template-columns:repeat(4,1fr)">${filters.map(([k, l]) => `<button class="segb ${exFilter === k ? 'on' : ''}" data-act="exFilter" data-v="${k}" aria-pressed="${exFilter === k}">${l}</button>`).join('')}</div>
+    <div class="mchips" role="group" aria-label="Filtrer par groupe musculaire">${mchip('all', 'Tous les muscles', null)}${groups.map((k) => mchip(k, k === 'none' ? 'Sans groupe' : MUSCLES[k], count(k))).join('')}</div>
     ${rows || '<div class="empty"><p>Aucun exercice dans ce filtre.</p></div>'}
     <button class="btn" data-act="newEx">+ Nouvel exercice</button></div>`;
 }
@@ -963,11 +982,17 @@ function openExSheet(id, opts = {}) {
     <label class="check"><input type="checkbox" name="perSide" ${ex.perSide ? 'checked' : ''}> Par côté</label>
     <div class="grid2" data-k="reps" ${isTime ? 'hidden' : ''}><label class="field"><span>Charge (kg)</span><input name="load" inputmode="decimal" value="${fnum(ex.load)}" placeholder="—"></label>
       <label class="check" style="align-self:end"><input type="checkbox" name="bodyweight" ${ex.bodyweight ? 'checked' : ''}> Poids du corps</label></div>
+    <div class="field"><span>Groupes musculaires</span><div class="chips">${Object.entries(MUSCLES).map(([k, l]) => chk('muscle', k, l, (ex.muscles || []).includes(k))).join('')}</div></div>
     <label class="field"><span>Consigne kiné</span><textarea name="cue" placeholder="Ex. buste fixe, ne pas cambrer">${esc(ex.cue)}</textarea></label>
     <div class="field"><span>Image</span><div id="photo-prev">${photoPrev()}</div>
       <div class="pick">${PICTOS.map((p) => `<label title="${esc(p.label)}"><input class="vh" type="radio" name="picto" value="${p.id}" ${ex.picto === p.id ? 'checked' : ''} aria-label="${esc(p.label)}"><span>${picto(p.id)}</span></label>`).join('')}</div></div>
     <div class="row wrap"><button class="btn sm" type="submit">Enregistrer</button>${id ? `<button class="btn sm danger" type="button" data-act="exDelete" data-id="${id}">Supprimer</button>` : ''}</div>
   </form>`, id ? "Modifier l'exercice" : 'Nouvel exercice');
+}
+// Garde l'ordre d'origine (groupe principal en tête), ajoute les nouveaux groupes à la fin
+function orderMuscles(picked, before = []) {
+  const kept = (before || []).filter((k) => picked.includes(k));
+  return [...kept, ...picked.filter((k) => !kept.includes(k))];
 }
 function photoPrev() {
   return sheetCtx.photo
@@ -1109,6 +1134,7 @@ const forms = {
       perSide: !!fd.get('perSide'), load: num(fd.get('load')), bodyweight: !!fd.get('bodyweight'),
       cue: (fd.get('cue') || '').trim(), picto: fd.get('picto') || 'none', photo: !!sheetCtx.photo,
       rest: fd.get('rest') === '' ? null : int(fd.get('rest'), 0, 600, null),
+      muscles: orderMuscles(fd.getAll('muscle'), prev?.muscles),
     };
     let target;
     if (sheetCtx.exId) {
@@ -1204,6 +1230,7 @@ const acts = {
   exEdit: (el) => openExSheet(el.dataset.id),
   exStatus: (el) => openStatus(el.dataset.id),
   exFilter: (el) => { exFilter = el.dataset.v; render(); },
+  muscleFilter: (el) => { muscleFilter = el.dataset.v; render(); },
   logTab: (el) => { logTab = el.dataset.v; render(); window.scrollTo(0, 0); },
   weight: () => openWeight(),
   weightDel: (el) => {
@@ -1381,6 +1408,11 @@ function migrate(st) {
   // Installations existantes avec des séances : pas besoin de la présentation
   if (st.onboarded === undefined) st.onboarded = st.sessions.length > 0;
   // Repos adaptés : pas de repos après la mobilité, 45 s pour le gainage
+  // Groupes musculaires des exercices du programme de départ
+  if ((st.seedVersion || 1) < 5) {
+    st.exercises.forEach((e) => { if (!e.muscles?.length && SEED_MUSCLES[e.id]) e.muscles = [...SEED_MUSCLES[e.id]]; });
+  }
+  st.exercises.forEach((e) => { e.muscles ||= []; });
   if ((st.seedVersion || 1) < 4) {
     const r = { mob: 0, plank: 45, side: 45, dead: 45, bird: 45 };
     st.exercises.forEach((e) => { if (r[e.id] != null && e.rest == null) e.rest = r[e.id]; });
