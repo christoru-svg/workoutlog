@@ -3,14 +3,19 @@
 
 const DB_NAME = 'workout-log';
 const STORE = 'kv';
+const PHOTOS = 'photos';   // photos rangées à part : la sauvegarde de l'état reste légère
 const KEY = 'state';
 
 let dbPromise = null;
 function openDb() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      const req = indexedDB.open(DB_NAME, 2);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+        if (!db.objectStoreNames.contains(PHOTOS)) db.createObjectStore(PHOTOS);
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
@@ -57,3 +62,35 @@ export async function flush() {
     try { localStorage.setItem(KEY, JSON.stringify(snapshot)); } catch { /* stockage plein ou bloqué */ }
   }
 }
+
+/* Photos des exercices : clé = id de l'exercice, valeur = image en data URL */
+export async function loadPhotos() {
+  const map = new Map();
+  try {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const req = db.transaction(PHOTOS).objectStore(PHOTOS).openCursor();
+      req.onsuccess = () => {
+        const c = req.result;
+        if (c) { map.set(c.key, c.value); c.continue(); } else resolve();
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch { /* pas de photos disponibles */ }
+  return map;
+}
+
+async function photoTx(fn) {
+  try {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(PHOTOS, 'readwrite');
+      fn(tx.objectStore(PHOTOS));
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch { /* stockage indisponible */ }
+}
+export const putPhoto = (id, data) => photoTx((st) => st.put(data, id));
+export const delPhoto = (id) => photoTx((st) => st.delete(id));
+export const clearPhotos = () => photoTx((st) => st.clear());

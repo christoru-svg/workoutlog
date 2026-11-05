@@ -13,6 +13,7 @@ function ex(id, name, equip, picto, extra = {}) {
     secs: 20,
     perSide: false,
     load: null,
+    rest: null,
     bodyweight: false,
     cue: '',
     photo: null,
@@ -21,34 +22,63 @@ function ex(id, name, equip, picto, extra = {}) {
   };
 }
 
+// Ajouté à ta demande, en « précaution » : rotation du buste en flexion, à confirmer avec ta kiné.
+export function twist() {
+  return ex('twist', 'Twist russe', 'Au sol', 'twist', {
+    status: 'warn', reps: 10, perSide: true, bodyweight: true,
+    cue: 'À confirmer avec ta kiné : rotation du buste en flexion. Lent, sans charge au début, amplitude réduite, dos long.',
+    history: [{ date: Date.now(), from: null, to: 'warn', reason: 'Ajouté, en attente de l\'avis de la kiné' }],
+  });
+}
+
+export function superman() {
+  return ex('superman', 'Superman', 'Au sol', 'superman', {
+    status: 'warn', reps: 10, bodyweight: true,
+    cue: 'À confirmer avec ta kiné. Bras et jambes levés de quelques centimètres, regard vers le sol, sans cambrer. Tenir 2 s.',
+    history: [{ date: Date.now(), from: null, to: 'warn', reason: 'Ajouté, en attente de l\'avis de la kiné' }],
+  });
+}
+
+// Exercices ajoutés après l'installation : la migration les ajoute sans toucher aux données.
+export const ADDONS = [
+  { v: 2, make: twist, tpl: 'tB', before: 'dead' },
+  { v: 3, make: superman, tpl: 'tA', before: 'ext' },
+];
+export const SEED_VERSION = 4;
+
 export function seed() {
   return {
     version: 1,
+    seedVersion: SEED_VERSION,
+    onboarded: false,
     settings: { painThreshold: 3, restSec: 75 },
     exercises: [
-      ex('mob', 'Mobilité bassin et respiration', 'Au sol', 'mob', { kind: 'time', sets: 1, secs: 480 }),
+      ex('mob', 'Mobilité bassin et respiration', 'Au sol', 'mob', { kind: 'time', sets: 1, secs: 480, rest: 0 }),
       ex('lat', 'Tirage vertical', 'Poulie', 'lat'),
       ex('row', 'Rowing assis', 'Poulie', 'row'),
       ex('face', 'Face pull', 'Poulie', 'face'),
       ex('curl', 'Curl biceps assis', 'Haltères', 'curl'),
-      ex('dead', 'Dead bug', 'Au sol', 'dead', { reps: 10, perSide: true, bodyweight: true }),
-      ex('bird', 'Bird dog', 'Au sol', 'bird', { reps: 10, perSide: true, bodyweight: true }),
-      ex('plank', 'Planche ventrale', 'Au sol', 'plank', { kind: 'time', secs: 20 }),
+      ex('dead', 'Dead bug', 'Au sol', 'dead', { reps: 10, perSide: true, bodyweight: true, rest: 45 }),
+      ex('bird', 'Bird dog', 'Au sol', 'bird', { reps: 10, perSide: true, bodyweight: true, rest: 45 }),
+      ex('plank', 'Planche ventrale', 'Au sol', 'plank', { kind: 'time', secs: 20, rest: 45 }),
       ex('ext', 'Extension du dos', 'Banc à 45°', 'ext', { bodyweight: true }),
       ex('bench', 'Développé couché', 'Machine', 'bench'),
       ex('ohp', 'Développé épaules assis', 'Machine', 'ohp'),
       ex('fly', 'Pec deck', 'Machine', 'fly'),
       ex('tri', 'Extension triceps', 'Poulie', 'tri'),
-      ex('side', 'Gainage latéral', 'Au sol', 'side', { kind: 'time', secs: 20, perSide: true }),
+      ex('side', 'Gainage latéral', 'Au sol', 'side', { kind: 'time', secs: 20, perSide: true, rest: 45 }),
       ex('pallof', 'Pallof press', 'Poulie', 'pallof', { reps: 12, perSide: true }),
+      twist(),
+      superman(),
     ],
     templates: [
       { id: 'tA', name: 'A · Tirage + transverse', letter: 'A', day: 2,
-        items: ['mob', 'lat', 'row', 'face', 'curl', 'dead', 'bird', 'plank', 'ext'] },
+        items: ['mob', 'lat', 'row', 'face', 'curl', 'dead', 'bird', 'plank', 'superman', 'ext'] },
       { id: 'tB', name: 'B · Poussée + obliques', letter: 'B', day: 4,
-        items: ['mob', 'bench', 'ohp', 'fly', 'tri', 'side', 'pallof', 'dead', 'ext'] },
+        items: ['mob', 'bench', 'ohp', 'fly', 'tri', 'side', 'pallof', 'twist', 'dead', 'ext'] },
     ],
     sessions: [],
+    weights: [],
     active: null,
   };
 }

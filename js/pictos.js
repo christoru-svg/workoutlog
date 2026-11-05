@@ -20,6 +20,8 @@ export const PICTOS = [
   { id: 'fly', label: 'Écarté / pec deck', d: `<path d="M6 4 V56 M74 4 V56 M18 26 L6 8 M62 26 L74 8" stroke="currentColor"/><circle cx="40" cy="10" r="4.5"/><path d="M40 16 V36 L34 55 M40 36 L46 55 M40 19 L26 22 L18 26 M40 19 L54 22 L62 26"/>` },
   { id: 'tri', label: 'Extension triceps', d: `<path d="M60 4 V56 M54 6 H62 M41 40 L55 6" stroke="currentColor"/><circle cx="40" cy="11" r="4.5"/><path d="M38 18 L34 36 L30 55 M34 36 L38 55 M38 20 L36 30 L41 40"/>` },
   { id: 'pallof', label: 'Pallof press', d: `<path d="M6 4 V56 M8 25 H38" stroke="currentColor"/><circle cx="44" cy="10" r="4.5"/><path d="M44 16 V36 L37 55 M44 36 L51 55 M38 19 L42 25 M50 19 L46 25"/><path d="M56 14 q8 6 0 14" stroke="currentColor"/>` },
+  { id: 'twist', label: 'Twist russe', d: `${FLOOR}<circle cx="22" cy="25" r="4.5"/><path d="M36 53 L26 32 M36 53 L50 40 L62 46 M27 34 L40 37"/><circle cx="43" cy="37" r="3.5" stroke="currentColor"/><path d="M44 24 q9 3 6 11" stroke="currentColor"/>` },
+  { id: 'superman', label: 'Superman', d: `${FLOOR}<circle cx="14" cy="43" r="4.5"/><path d="M20 47 L46 50 M21 46 L4 38 M46 50 L74 43"/><path d="M33 40 V31 M29.5 34.5 L33 31 L36.5 34.5" stroke="currentColor"/>` },
   { id: 'none', label: 'Haltère', d: `<path d="M22 30 H58 M18 20 V40 M24 23 V37 M62 20 V40 M56 23 V37" stroke="currentColor"/>` },
 ];
 

@@ -4,23 +4,33 @@ Carnet de muscu en PWA, pensé pour une hernie L5‑S1 : chaque exercice porte u
 
 Aucune dépendance et aucune étape de build : ce sont des fichiers statiques (HTML, CSS, JavaScript). Les données restent sur le téléphone (IndexedDB), sans compte.
 
-## Ce que fait la V1
+## Ce que fait l'app
 
-- **Accueil** : la prochaine séance selon tes jours (mardi A, jeudi B), la carte « Bilan du lendemain » quand il est dû, la courbe de douleur.
-- **Séances** : modèles A et B, détail avec régularité et douleur moyenne, modification (nom, lettre, jour, ordre des exercices).
+- **Premier lancement** : une présentation en 5 écrans (tes jours, les statuts kiné, ton seuil de douleur, les signaux d'alerte), à revoir depuis les réglages.
+- **Accueil** : la prochaine séance selon tes jours (mardi A, jeudi B), la carte « Bilan du lendemain » quand il est dû, un rappel de sauvegarde toutes les 4 semaines, la courbe de douleur.
+- **Séances** :
+  - modèles A et B, avec régularité et douleur moyenne ;
+  - appui long sur une carte pour la modifier, la dupliquer, la renommer ou la supprimer ;
+  - glisser vers la gauche pour supprimer, avec Annuler ;
+  - séance libre, sans modèle.
 - **Séance en cours** :
   - point douleur avant de commencer, avec alerte au‑dessus du seuil ;
-  - tous les exercices en accordéon ;
-  - séries pré‑remplies avec la dernière charge, un bouton « Valider la série » ;
-  - minuteur de repos qui vibre et bipe à la fin ;
+  - tous les exercices en accordéon, et la possibilité d'en ajouter en cours de séance ;
+  - « Dernière fois » sous chaque exercice, charges arrondies à une décimale ;
+  - séries pré‑remplies avec la dernière charge, un bouton « Valider la série » protégé contre le double tap ;
+  - minuteur de tenue pour les exercices en durée (planche, gainage), côté par côté ;
+  - repos réglable par exercice, avec un minuteur qui vibre et bipe à la fin ;
   - « Ça tire » pour marquer une gêne sur une série ;
-  - ressenti à chaud (facile, modéré, dur) après chaque exercice ;
+  - ressenti à chaud après chaque exercice ;
   - écran maintenu allumé.
 - **Bilan J+1** : le lendemain dès 5 h, douleur au réveil, raideur, jambe, et ce qui a pu jouer.
-- **Carnet** : semaine en cours, graphique de la douleur au réveil avec ton seuil, piste à surveiller quand une séance donne des lendemains plus douloureux, et détail de chaque séance série par série comparée à la fois précédente.
-- **Exercices** : bibliothèque, ajout et modification, pictogramme ou photo, statut kiné modifiable et daté.
-- **Progression** : +2,5 kg proposé seulement après deux séances « faciles » avec des lendemains sous le seuil. Au‑dessus du seuil, l'app conseille de garder la charge.
-- **Réglages** : seuil de douleur, temps de repos, export et import JSON, réinitialisation.
+- **Carnet**, en deux onglets :
+  - **Bilan** : totaux, séances par semaine avec l'objectif, semaine en cours, douleur au réveil et pistes à surveiller, poids, dernière séance ;
+  - **Historique** : chaque séance série par série, comparée à la fois précédente.
+- **Plus** :
+  - **bibliothèque d'exercices** : pictogramme ou photo, statut kiné modifiable et daté ;
+  - **réglages** : seuil de douleur, temps de repos, export et import JSON, réinitialisation.
+- **Progression** : +2,5 kg proposé seulement après deux séances « faciles » avec des lendemains sous le seuil.
 
 ## Lancer en local
 
@@ -58,7 +68,7 @@ styles.css            DA (tokens clair et sombre)
 manifest.webmanifest  installation PWA
 sw.js                 cache hors ligne
 js/app.js             écrans, séance en cours, bilan J+1
-js/store.js           stockage IndexedDB
+js/store.js           stockage IndexedDB (état et photos séparés)
 js/seed.js            programme de départ (A et B)
 js/pictos.js          pictogrammes et logo
 icons/                icônes de l'app

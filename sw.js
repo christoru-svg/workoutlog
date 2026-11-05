@@ -1,7 +1,7 @@
 // Service worker : l'app fonctionne hors ligne (sous‑sol de la salle, réseau faible).
 // Fichiers de l'app : réponse immédiate depuis le cache, mise à jour en arrière‑plan.
 // Changer VERSION à chaque déploiement force le renouvellement du cache.
-const VERSION = 'wl-v1';
+const VERSION = 'wl-v6';
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
   './js/app.js', './js/store.js', './js/seed.js', './js/pictos.js',
@@ -9,7 +9,8 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: 'reload' contourne le cache HTTP pour que tous les fichiers viennent de la même version.
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -31,7 +32,7 @@ self.addEventListener('fetch', (e) => {
     caches.open(VERSION).then(async (cache) => {
       const key = req.mode === 'navigate' ? './index.html' : req;
       const cached = await cache.match(key);
-      const network = fetch(req)
+      const network = (isFont ? fetch(req) : fetch(req.url, { cache: 'no-cache' }))
         .then((res) => {
           if (res.ok || res.type === 'opaque') cache.put(key, res.clone());
           return res;
