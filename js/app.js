@@ -1592,12 +1592,16 @@ function movePhotos() {
 /* ---------- Démarrage ---------- */
 (async function init() {
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
-  onBlocked(() => {
+  const showBlocked = () => {
     app.innerHTML = `<div class="empty"><strong>Mise à jour en attente</strong>
       <p>Workout Log est encore ouvert dans un autre onglet ou une autre fenêtre avec l'ancienne version. Ferme‑le : l'app s'ouvrira automatiquement ici, sans perdre tes données.</p>
       <button class="btn sm" onclick="location.reload()">Réessayer</button></div>`;
-  });
+  };
+  onBlocked(showBlocked);
+  // Filet de sécurité : certains navigateurs mettent la demande en attente sans prévenir
+  const waitTimer = setTimeout(showBlocked, 4000);
   const [stored, ph] = await Promise.all([load(), loadPhotos()]);
+  clearTimeout(waitTimer);
   photos = ph;
   S = stored && Array.isArray(stored.exercises) ? migrate(stored) : seed();
   if (!stored) commit();

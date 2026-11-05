@@ -1,7 +1,7 @@
 // Service worker : l'app fonctionne hors ligne (sous‑sol de la salle, réseau faible).
 // Fichiers de l'app : réponse immédiate depuis le cache, mise à jour en arrière‑plan.
 // Changer VERSION à chaque déploiement force le renouvellement du cache.
-const VERSION = 'wl-v7';
+const VERSION = 'wl-v8';
 const SHELL = [
   './', './index.html', './styles.css', './manifest.webmanifest',
   './js/app.js', './js/store.js', './js/seed.js', './js/pictos.js',
