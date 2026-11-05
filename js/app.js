@@ -67,6 +67,25 @@ const FREE = '__free';
 const REST_OPTS = [0, 30, 45, 60, 75, 90, 120, 150, 180];
 const restFor = (ex) => (ex && ex.rest != null ? ex.rest : S.settings.restSec);
 
+// Durée estimée d'une séance : temps d'effort + repos entre les séries + installation au poste.
+// Effort : ~3,5 s par répétition, ou la durée de tenue ; doublé pour un exercice par côté.
+function estimateMin(t) {
+  const secs = activeItems(t).reduce((total, ex) => {
+    const sides = ex.perSide ? 2 : 1;
+    const work = ex.kind === 'time' ? ex.secs * sides + (ex.perSide ? 5 : 0) : ex.reps * 3.5 * sides;
+    const sets = Math.max(1, ex.sets);
+    return total + sets * work + (sets - 1) * restFor(ex) + 45;
+  }, 0);
+  return Math.max(5, Math.round(secs / 60 / 5) * 5);
+}
+// Durée réelle moyenne des 5 dernières séances de ce modèle (au moins 2)
+function avgMin(t) {
+  const ss = S.sessions.filter((s) => s.templateId === t.id).slice(-5);
+  if (ss.length < 2) return null;
+  return Math.round(avg(ss.map((s) => (s.end - s.start) / 60000)));
+}
+const durLabel = (t) => `~${estimateMin(t)} min`;
+
 function fmtTarget(ex) {
   if (!ex) return '';
   const side = ex.perSide ? '/côté' : '';
@@ -259,7 +278,7 @@ function vHome() {
     const t = nx.tpl;
     const last = S.sessions.filter((s) => s.templateId === t.id).slice(-1)[0];
     out += `<div class="card"><span class="small">${nx.label}</span><strong class="h2">${esc(t.name)}</strong>
-      <span class="small mono">${activeItems(t).length} exercices · ~${Math.max(10, activeItems(t).length * 5)} min${last ? ' · dernière ' + ago(last.start) : ''}</span>
+      <span class="small mono">${activeItems(t).length} exercices · ${durLabel(t)}${last ? ' · dernière ' + ago(last.start) : ''}</span>
       <button class="btn" data-act="start" data-id="${t.id}">Démarrer la séance</button>
       <div class="row between wrap">${S.templates.length > 1 ? '<a class="link" href="#templates">Choisir une autre séance</a>' : '<span></span>'}<button class="link" data-act="startFree">Séance libre</button></div></div>`;
   } else if (!S.templates.length) {
@@ -324,7 +343,7 @@ function vTemplates() {
     return `<div class="swipe"><button class="swipe-del" data-act="tplDelNow" data-id="${t.id}" tabindex="-1">Supprimer</button>
       <div class="card tcard" data-press="${t.id}" data-act="openTpl" data-id="${t.id}">
       <div class="row between"><div class="t"><a href="#template/${t.id}" style="text-decoration:none"><strong class="h2">${esc(t.name)}</strong></a>
-      <span class="small">${activeItems(t).length} exercices${t.day != null ? ' · ' + DAY_L[t.day] : ''}</span></div>
+      <span class="small">${activeItems(t).length} exercices · ${durLabel(t)}${t.day != null ? ' · ' + DAY_L[t.day] : ''}</span></div>
       <div class="row" style="gap:4px"><span class="badge ${k % 2 ? 'alt' : ''}">${esc(t.letter || '•')}</span><button class="iconbtn" data-act="tplMenu" data-id="${t.id}" aria-label="Actions pour ${esc(t.name)}">${I.more}</button></div></div>
       ${items.slice(0, 3).map((e) => `<div class="li"><span class="dot c-${e.status}"></span><span>${esc(exName(e))}</span><span class="mono">${fmtTarget(e)}</span></div>`).join('')}
       <span class="link" style="justify-self:end">${items.length ? 'Voir tout' : 'Ouvrir'}</span></div></div>`;
@@ -356,6 +375,7 @@ function vTemplate(id) {
   return `<div class="stack">
     <div class="band"><div class="row between"><a class="iconbtn" href="#templates" aria-label="Retour aux séances">${I.back}</a><button class="iconbtn" data-act="tplMenu" data-id="${t.id}" aria-label="Options de la séance">${I.more}</button></div>
       <h1 class="h1">${esc(t.name)}</h1>
+      <span class="band-sub">Durée estimée ${durLabel(t)}${avgMin(t) ? ` · ${avgMin(t)} min en moyenne` : ''}</span>
       <div class="stats"><div><strong>${ss.length}</strong><span>séances</span></div><div><strong>${reg}</strong><span>régularité (4 sem.)</span></div><div><strong>${pain}</strong><span>douleur avant → J+1</span></div></div></div>
     ${items || '<div class="empty"><p>Cette séance est vide.</p></div>'}
     <a class="btn ghost" href="#template/${t.id}/edit">Modifier la séance</a>
@@ -379,7 +399,7 @@ function vTemplateEdit(id) {
     <label class="field"><span>Nom</span><input id="tpl-name" data-tpl="name" data-id="${t.id}" value="${esc(t.name)}"></label>
     <div class="grid2"><label class="field"><span>Lettre</span><input id="tpl-letter" data-tpl="letter" data-id="${t.id}" maxlength="2" value="${esc(t.letter)}"></label>
     <label class="field"><span>Jour habituel</span><select id="tpl-day" data-tpl="day" data-id="${t.id}"><option value="">Aucun</option>${DAY_ORDER.map((d) => `<option value="${d}" ${t.day === d ? 'selected' : ''}>${cap(DAY_L[d])}</option>`).join('')}</select></label></div>
-    <span class="eyebrow">Exercices, dans l'ordre</span>
+    <div class="row between"><span class="eyebrow">Exercices, dans l'ordre</span><span class="small mono">${t.items.length ? 'Durée estimée ' + durLabel(t) : ''}</span></div>
     ${rows || '<p class="small">Aucun exercice pour l\'instant.</p>'}
     <button class="btn ghost" data-act="pickEx" data-id="${t.id}">+ Ajouter des exercices</button>
     <a class="btn" href="#template/${t.id}">Terminé</a></div>`;

@@ -408,3 +408,5 @@ button.chip { min-height: 34px; }
 
 .imgrow { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; }
 .imgrow .thumb.lg { width: 112px; height: 84px; max-height: none; aspect-ratio: auto; }
+
+.band-sub { font-size: .88rem; opacity: .85; padding-inline: 4px; margin-top: -4px; }
