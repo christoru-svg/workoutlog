@@ -1,6 +1,6 @@
 import { load, save, flush, loadPhotos, putPhoto, delPhoto, clearPhotos, onBlocked } from './store.js';
 import { seed, ADDONS, SEED_VERSION, MUSCLES, SEED_MUSCLES } from './seed.js';
-import { SPRITE, PICTOS, picto, logo } from './pictos.js';
+import { SPRITE, picto, logo } from './pictos.js';
 
 const app = document.getElementById('app');
 const sheetEl = document.getElementById('sheet');
@@ -966,7 +966,7 @@ function j1Live(f) {
 function openExSheet(id, opts = {}) {
   const ex = id ? exById(id) : { name: '', equip: '', status: 'ok', kind: 'reps', sets: 3, reps: 15, secs: 20, perSide: false, load: null, bodyweight: false, cue: '', picto: 'none', photo: null };
   if (!ex) return;
-  sheetCtx = { photo: id ? photoOf(ex) : null, exId: id || null, addTo: opts.addTo || null };
+  sheetCtx = { photo: id ? photoOf(ex) : null, picto: ex.picto || 'none', exId: id || null, addTo: opts.addTo || null };
   const isTime = ex.kind === 'time';
   openSheet(`<form data-form="ex" class="stack">
     <h2 class="h2">${id ? "Modifier l'exercice" : 'Nouvel exercice'}</h2>
@@ -985,7 +985,7 @@ function openExSheet(id, opts = {}) {
     <div class="field"><span>Groupes musculaires</span><div class="chips">${Object.entries(MUSCLES).map(([k, l]) => chk('muscle', k, l, (ex.muscles || []).includes(k))).join('')}</div></div>
     <label class="field"><span>Consigne kiné</span><textarea name="cue" placeholder="Ex. buste fixe, ne pas cambrer">${esc(ex.cue)}</textarea></label>
     <div class="field"><span>Image</span><div id="photo-prev">${photoPrev()}</div>
-      <div class="pick">${PICTOS.map((p) => `<label title="${esc(p.label)}"><input class="vh" type="radio" name="picto" value="${p.id}" ${ex.picto === p.id ? 'checked' : ''} aria-label="${esc(p.label)}"><span>${picto(p.id)}</span></label>`).join('')}</div></div>
+      <input type="hidden" name="picto" value="${esc(ex.picto || 'none')}"></div>
     <div class="row wrap"><button class="btn sm" type="submit">Enregistrer</button>${id ? `<button class="btn sm danger" type="button" data-act="exDelete" data-id="${id}">Supprimer</button>` : ''}</div>
   </form>`, id ? "Modifier l'exercice" : 'Nouvel exercice');
 }
@@ -994,10 +994,16 @@ function orderMuscles(picked, before = []) {
   const kept = (before || []).filter((k) => picked.includes(k));
   return [...kept, ...picked.filter((k) => !kept.includes(k))];
 }
+// Chaque pictogramme est propre à son exercice : on ne propose pas de le changer, seulement d'ajouter ta photo.
 function photoPrev() {
-  return sheetCtx.photo
-    ? `<div class="row"><img class="thumb" src="${sheetCtx.photo}" alt="Photo de l'exercice"><button type="button" class="link" data-act="photoRemove">Retirer la photo</button></div>`
-    : `<label class="btn sm ghost" style="justify-self:start"><input type="file" accept="image/*" data-photo hidden>Ajouter ta photo</label>`;
+  if (sheetCtx.photo) {
+    return `<div class="imgrow"><img class="thumb lg" src="${esc(sheetCtx.photo)}" alt="Photo de l'exercice">
+      <div class="stack-s"><label class="btn sm ghost"><input type="file" accept="image/*" data-photo hidden>Changer la photo</label><button type="button" class="link" data-act="photoRemove">Retirer la photo</button></div></div>`;
+  }
+  const generic = sheetCtx.picto === 'none';
+  return `<div class="imgrow">${picto(sheetCtx.picto, 'thumb lg')}
+    <div class="stack-s"><span class="small">${generic ? 'Illustration générique.' : 'Illustration de cet exercice.'} Tu peux la remplacer par ta photo, par exemple la machine de ta salle.</span>
+    <label class="btn sm ghost" style="justify-self:start"><input type="file" accept="image/*" data-photo hidden>Ajouter ta photo</label></div></div>`;
 }
 function handlePhoto(input) {
   const file = input.files?.[0];
