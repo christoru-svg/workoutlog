@@ -410,3 +410,19 @@ button.chip { min-height: 34px; }
 .imgrow .thumb.lg { width: 112px; height: 84px; max-height: none; aspect-ratio: auto; }
 
 .band-sub { font-size: .88rem; opacity: .85; padding-inline: 4px; margin-top: -4px; }
+
+/* Douleur au quotidien */
+.pdot { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.pdot.before, .pdot.after { fill: var(--accent-2); }
+.pdot.j1 { fill: var(--warn); }
+.plegend { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.plegend span { display: inline-flex; align-items: center; gap: 6px; }
+.plegend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--accent); }
+.plegend i.before { background: var(--accent-2); }
+.plegend i.j1 { background: var(--warn); }
+.painrow { display: grid; grid-template-columns: 3rem 1fr; gap: 12px; align-items: center; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; text-align: left; }
+.card .painrow { border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 8px 0; background: none; }
+.painrow .pv { font-family: var(--f-mono); font-size: 1.25rem; font-weight: 600; text-align: center; background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 6px 0; }
+.painrow .pv.hi { background: var(--warn-soft); color: var(--warn); }
+.painrow strong { font-size: .92rem; }
+.seg.two { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }

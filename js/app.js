@@ -313,27 +313,91 @@ function j1Card(s) {
     <button class="btn" data-act="j1" data-id="${s.id}">Faire le bilan (30 s)</button></div>`;
 }
 
-function painTrend() {
-  const ss = S.sessions.slice(-8);
-  const pts = ss.map((s) => s.j1?.eva ?? s.painAfter?.eva).filter((v) => v != null);
-  if (pts.length < 2) {
-    return `<div class="card"><span class="small">Douleur</span><span>Ta courbe de douleur apparaîtra après deux séances.</span></div>`;
+const MOMENTS = { wake: 'Réveil', day: 'Journée', effort: 'Après effort', evening: 'Soir' };
+const ZONES = { lomb: 'Lombaires', fesse: 'Fesse', jambe: 'Jambe' };
+
+// Tous les relevés de douleur : saisies libres + avant/après séance + bilan J+1
+function painPoints() {
+  const pts = (S.painLogs || []).map((p) => ({ t: p.date, eva: p.eva, kind: 'log' }));
+  for (const s of S.sessions) {
+    if (s.painBefore?.eva != null) pts.push({ t: s.start, eva: s.painBefore.eva, kind: 'before' });
+    if (s.painAfter?.eva != null) pts.push({ t: s.end, eva: s.painAfter.eva, kind: 'after' });
+    if (s.j1?.eva != null) pts.push({ t: s.j1.date, eva: s.j1.eva, kind: 'j1' });
   }
-  const W = 300, H = 70, n = pts.length;
-  const x = (i) => 8 + (i * (W - 16)) / (n - 1);
-  const y = (v) => 60 - v * 5;
-  const line = pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v)}`).join(' ');
-  const first = avg(pts.slice(0, Math.ceil(n / 2))), second = avg(pts.slice(Math.floor(n / 2)));
+  return pts.sort((a, b) => a.t - b.t);
+}
+
+// Courbe de douleur dans le temps (0 à 10), avec le seuil
+function painChart(days, H = 96) {
+  const now = Date.now();
+  const t0 = now - days * DAY_MS;
+  const pts = painPoints().filter((p) => p.t >= t0);
+  if (pts.length < 2) return { pts, svg: '' };
+  const W = 300, padL = 18, base = H - 18, top = 8;
+  const x = (t) => padL + ((t - t0) / (now - t0)) * (W - padL - 8);
+  const y = (v) => base - (v / 10) * (base - top);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)} ${y(p.eva).toFixed(1)}`).join(' ');
+  const ty = y(th());
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Douleur sur ${days} jours : de ${pts[0].eva} à ${pts[pts.length - 1].eva}">
+    ${[0, 5, 10].map((v) => `<line class="ch-grid" x1="${padL}" y1="${y(v).toFixed(1)}" x2="${W - 4}" y2="${y(v).toFixed(1)}"/><text class="ch-t" x="${padL - 5}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${v}</text>`).join('')}
+    <line class="ch-th" x1="${padL}" y1="${ty.toFixed(1)}" x2="${W - 4}" y2="${ty.toFixed(1)}"/>
+    <path class="spark-l" d="${line}"/>
+    ${pts.map((p) => `<circle class="pdot ${p.kind}" cx="${x(p.t).toFixed(1)}" cy="${y(p.eva).toFixed(1)}" r="${p.kind === 'log' ? 4 : 3}"/>`).join('')}
+    <text class="ch-t" x="${padL}" y="${H - 3}">${dNum(t0)}</text><text class="ch-t" x="${W - 4}" y="${H - 3}" text-anchor="end">aujourd'hui</text>
+  </svg>`;
+  return { pts, svg };
+}
+
+function painTrend() {
+  const { pts, svg } = painChart(14, 84);
+  const btn = '<button class="btn sm" data-act="painLog">Noter</button>';
+  if (!svg) {
+    return `<div class="card"><div class="row between"><span class="small">Douleur</span>${btn}</div><span>Note ta douleur quand tu veux, pas seulement aux séances. La courbe apparaîtra dès deux relevés.</span></div>`;
+  }
+  const n = pts.length;
+  const first = avg(pts.slice(0, Math.ceil(n / 2)).map((p) => p.eva)), second = avg(pts.slice(Math.floor(n / 2)).map((p) => p.eva));
   const trend = second < first - 0.4 ? ['ok', 'en baisse'] : second > first + 0.4 ? ['warn', 'en hausse'] : ['acc', 'stable'];
-  const hasJ1 = ss.some((s) => s.j1);
-  return `<div class="card"><div class="row between"><span class="small">${hasJ1 ? 'Douleur au réveil, dernières séances' : 'Douleur après tes séances'}</span><span class="chip ${trend[0]}"><span class="dot"></span>${trend[1]}</span></div>
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Douleur de ${pts[0]} à ${pts[n - 1]}">
-      <line class="ch-base" x1="0" y1="62" x2="${W}" y2="62"/>
-      <path class="spark-a" d="${line} L${x(n - 1).toFixed(1)} 62 L${x(0)} 62Z"/>
-      <path class="spark-l" d="${line}"/>
-      <circle class="spark-d" cx="${x(n - 1).toFixed(1)}" cy="${y(pts[n - 1])}" r="4"/>
-    </svg>
-    <div class="row between small mono"><span>EVA ${pts[0]}</span><span>EVA ${pts[n - 1]}</span></div></div>`;
+  const last = pts[n - 1];
+  return `<div class="card"><div class="row between"><span class="small">Douleur · 14 derniers jours</span>${btn}</div>
+    <div class="row wrap" style="gap:8px"><span class="chip ${trend[0]}"><span class="dot"></span>${trend[1]}</span><span class="small">Dernier relevé : ${last.eva}/10, ${ago(last.t)}</span></div>
+    ${svg}</div>`;
+}
+
+function painDailyCard() {
+  const { svg } = painChart(30);
+  const logs = [...(S.painLogs || [])].sort((a, b) => b.date - a.date).slice(0, 3);
+  const legend = '<div class="plegend small"><span><i class="pdot log"></i>saisie libre</span><span><i class="pdot before"></i>séance</span><span><i class="pdot j1"></i>lendemain</span></div>';
+  return `<div class="card"><div class="row between"><span class="small">Douleur au quotidien · 30 jours</span><button class="btn sm" data-act="painLog">Noter</button></div>
+    ${svg ? svg + legend : '<span class="small">La courbe apparaîtra dès deux relevés : saisies libres, séances et bilans du lendemain.</span>'}
+    ${logs.length ? `<span class="small">Dernières saisies</span>${logs.map(painRow).join('')}` : ''}</div>`;
+}
+function painRow(p) {
+  const d = new Date(p.date);
+  const meta = [p.moment && MOMENTS[p.moment], ...(p.zones || []).map((z) => ZONES[z]), p.tingling && 'fourmillements'].filter(Boolean).join(' · ');
+  return `<button class="painrow" data-act="painLog" data-id="${p.id}"><span class="pv ${p.eva > th() ? 'hi' : ''}">${p.eva}</span>
+    <span class="t"><strong>${cap(dShort(p.date))} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</strong><span class="small">${esc(meta) || 'Douleur notée'}${p.note ? ' · ' + esc(p.note) : ''}</span></span></button>`;
+}
+
+function openPainLog(id) {
+  const p = id ? (S.painLogs || []).find((x) => x.id === id) : null;
+  const d = new Date(p ? p.date : Date.now());
+  const pad = (n) => String(n).padStart(2, '0');
+  const local = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const h = d.getHours();
+  const moment = p?.moment || (h < 10 ? 'wake' : h >= 19 ? 'evening' : 'day');
+  openSheet(`<form data-form="pain" ${p ? `data-id="${p.id}"` : ''} class="stack">
+    <div><span class="small">${p ? 'Modifier le relevé' : 'Relevé libre'}</span><h2 class="h2">Comment va ton dos ?</h2></div>
+    <div class="field"><span>Douleur (0 = aucune, 10 = maximale)</span>${scale('eva', p ? p.eva : null)}</div>
+    <div class="field"><span>Où ?</span><div class="chips">${Object.entries(ZONES).map(([k, l]) => chk('zone', k, l, (p?.zones || []).includes(k))).join('')}</div></div>
+    <div class="field"><span>Fourmillements ou engourdissement ?</span>${seg('ting', [['0', 'Non'], ['1', 'Oui']], p?.tingling ? '1' : '0')}</div>
+    <div class="field"><span>Moment</span>${seg('moment', Object.entries(MOMENTS), moment).replace('class="seg"', 'class="seg two"')}</div>
+    <div class="field"><span>Ce qui a pu jouer</span><div class="chips">${['Mal dormi', 'Longtemps assis', 'Port de charge', 'Stress', 'Marche', 'Rien de spécial'].map((f) => chk('fac', f, f, (p?.factors || []).includes(f))).join('')}</div></div>
+    <label class="field"><span>Note (optionnel)</span><input name="note" value="${esc(p?.note || '')}" placeholder="Ex. après 2 h de voiture" autocomplete="off"></label>
+    <label class="field"><span>Quand</span><input name="when" type="datetime-local" value="${local}" required></label>
+    <div id="pain-warn"></div>
+    <button class="btn" type="submit">Enregistrer</button>
+    ${p ? `<button class="btn danger" type="button" data-act="painDel" data-id="${p.id}">Supprimer ce relevé</button>` : ''}
+  </form>`, 'Noter ma douleur');
 }
 
 /* Séances */
@@ -576,7 +640,7 @@ function vLog() {
   out += `<div class="segb-row" style="grid-template-columns:1fr 1fr">${[['bilan', 'Bilan'], ['history', 'Historique']].map(([k, l]) =>
     `<button class="segb ${logTab === k ? 'on' : ''}" data-act="logTab" data-v="${k}" aria-pressed="${logTab === k}">${l}</button>`).join('')}</div>`;
   out += logTab === 'bilan'
-    ? totalsCard() + weeksCard() + weekCard() + j1Insights() + weightCard() + lastSessionCard()
+    ? totalsCard() + weeksCard() + weekCard() + painDailyCard() + j1Insights() + weightCard() + lastSessionCard()
     : historyList();
   return `<div class="stack">${out}</div>`;
 }
@@ -666,13 +730,21 @@ function lastSessionCard() {
 
 function historyList() {
   let out = '';
-  const list = [...S.sessions].reverse();
-  if (!list.length) {
-    out += `<div class="empty"><p>Ton carnet est vide pour l'instant. Chaque séance terminée s'ajoute ici, avec ton bilan du lendemain.</p><a class="btn sm" href="#home">Aller à l'accueil</a></div>`;
+  // Séances et relevés libres, mélangés par date
+  const items = [...S.sessions.map((s) => ({ t: s.start, s })), ...(S.painLogs || []).map((p) => ({ t: p.date, p }))].sort((a, b) => b.t - a.t);
+  if (!items.length) {
+    out += `<div class="empty"><p>Ton carnet est vide pour l'instant. Chaque séance terminée et chaque douleur notée s'ajoutent ici.</p><a class="btn sm" href="#home">Aller à l'accueil</a></div>`;
   }
   let month = '';
-  for (const s of list) {
-    const d = new Date(s.start);
+  for (const it of items) {
+    const d = new Date(it.t);
+    const mm = `${MON[d.getMonth()]} ${d.getFullYear()}`;
+    if (it.p) {
+      if (mm !== month) { month = mm; out += `<h2 class="eyebrow">${mm}</h2>`; }
+      out += painRow(it.p);
+      continue;
+    }
+    const s = it.s;
     const m = `${MON[d.getMonth()]} ${d.getFullYear()}`;
     if (m !== month) { month = m; out += `<h2 class="eyebrow">${m}</h2>`; }
     const flags = s.entries.reduce((a, e) => a + e.sets.filter((x) => x.flag).length, 0);
@@ -940,6 +1012,15 @@ function openCheckin(tid) {
     <div id="ci-warn"></div>
     <button class="btn" type="submit">Commencer</button></form>`, 'Avant de commencer');
 }
+function painWarn(f) {
+  const fd = new FormData(f);
+  const eva = num(fd.get('eva'));
+  const ting = fd.get('ting') === '1';
+  const box = f.querySelector('#pain-warn');
+  box.innerHTML = ting
+    ? `<div class="note">Perte de force dans la jambe, engourdissement du périnée ou troubles urinaires : consulte rapidement un médecin.</div>`
+    : eva != null && eva > th() ? `<div class="note">Au‑dessus de ton seuil (${th()}). Si ça dure ou augmente, parles‑en à ta kiné.</div>` : '';
+}
 function ciWarn(f) {
   const fd = new FormData(f);
   const eva = num(fd.get('eva'));
@@ -1195,6 +1276,22 @@ const forms = {
     }
     commit(); closeSheet(); render();
   },
+  pain(f) {
+    const fd = new FormData(f);
+    const eva = num(fd.get('eva'));
+    if (eva == null) { toast('Choisis ta douleur de 0 à 10.'); return; }
+    const when = new Date(String(fd.get('when'))).getTime();
+    const data = {
+      date: Number.isFinite(when) ? Math.min(when, Date.now()) : Date.now(),
+      eva, zones: fd.getAll('zone'), tingling: fd.get('ting') === '1',
+      moment: fd.get('moment'), factors: fd.getAll('fac'), note: (fd.get('note') || '').trim(),
+    };
+    S.painLogs ||= [];
+    const existing = f.dataset.id && S.painLogs.find((x) => x.id === f.dataset.id);
+    if (existing) Object.assign(existing, data); else S.painLogs.push({ id: uid(), ...data });
+    commit(); closeSheet(); render();
+    toast(eva > th() || data.tingling ? 'Noté. Au‑dessus de ton seuil : vas‑y doucement aujourd\'hui.' : 'Douleur notée.');
+  },
   weight(f) {
     const fd = new FormData(f);
     const kg = num(fd.get('kg'));
@@ -1259,6 +1356,12 @@ const acts = {
   muscleFilter: (el) => { muscleFilter = el.dataset.v; render(); },
   logTab: (el) => { logTab = el.dataset.v; render(); window.scrollTo(0, 0); },
   weight: () => openWeight(),
+  painLog: (el) => openPainLog(el.dataset.id),
+  painDel: (el) => {
+    if (!armed(el, 'Confirmer la suppression')) return;
+    S.painLogs = (S.painLogs || []).filter((x) => x.id !== el.dataset.id);
+    commit(); closeSheet(); render(); toast('Relevé supprimé.');
+  },
   weightDel: (el) => {
     const d = +el.dataset.d;
     S.weights = (S.weights || []).filter((x) => x.date !== d);
@@ -1431,6 +1534,7 @@ function migrate(st) {
   st.sessions.sort((a, b) => a.start - b.start);
   st.active ??= null;
   st.weights ||= [];
+  st.painLogs ||= [];
   // Installations existantes avec des séances : pas besoin de la présentation
   if (st.onboarded === undefined) st.onboarded = st.sessions.length > 0;
   // Repos adaptés : pas de repos après la mobilité, 45 s pour le gainage
@@ -1518,6 +1622,7 @@ document.addEventListener('input', (e) => {
   const f = t.closest('form');
   if (f?.dataset.form === 'checkin') ciWarn(f);
   if (f?.dataset.form === 'j1') j1Live(f);
+  if (f?.dataset.form === 'pain') painWarn(f);
 });
 
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheetEl.hidden) closeSheet(); });

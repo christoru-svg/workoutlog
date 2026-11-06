@@ -23,6 +23,7 @@ Aucune dépendance et aucune étape de build : ce sont des fichiers statiques (H
   - « Ça tire » pour marquer une gêne sur une série ;
   - ressenti à chaud après chaque exercice ;
   - écran maintenu allumé.
+- **Douleur à tout moment** : bouton « Noter » sur l'accueil et dans le Bilan (douleur, zone, moment, ce qui a pu jouer, date modifiable). Courbe sur 14 et 30 jours avec ton seuil, relevés mêlés à l'historique.
 - **Bilan J+1** : le lendemain dès 5 h, douleur au réveil, raideur, jambe, et ce qui a pu jouer.
 - **Carnet**, en deux onglets :
   - **Bilan** : totaux, séances par semaine avec l'objectif, semaine en cours, douleur au réveil et pistes à surveiller, poids, dernière séance ;
@@ -35,7 +36,7 @@ Aucune dépendance et aucune étape de build : ce sont des fichiers statiques (H
 ## Lancer en local
 
 ```bash
-python3 -m http.server 4180 -d ~/workout-log
+python3 -m http.server 4180 -d ~/Documents/Chris/workout-log
 ```
 
 Puis ouvrir http://localhost:4180.

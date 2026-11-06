@@ -105,6 +105,7 @@ export function seed() {
     ],
     sessions: [],
     weights: [],
+    painLogs: [],
     active: null,
   };
 }
