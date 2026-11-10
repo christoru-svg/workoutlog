@@ -483,12 +483,12 @@ function vSession() {
   const warn = a.painBefore && (a.painBefore.eva > th() || a.painBefore.tingling)
     ? `<div class="note">Douleur à ${a.painBefore.eva}${a.painBefore.tingling ? ' avec fourmillements' : ''} avant de commencer : version allégée conseillée (charges plus basses, moins de séries, ou seulement l'échauffement).</div>` : '';
   return `<div class="stack">
-    <div class="top"><a class="iconbtn" href="#home" aria-label="Retour à l'accueil">${I.back}</a>
+    <div class="top sess-top"><a class="iconbtn" href="#home" aria-label="Retour à l'accueil">${I.back}</a>
       <div class="t"><span class="small">${esc(a.name)}</span><span class="clock mono" id="chrono">${clock(Date.now() - a.start)}</span></div>
       <span class="small mono">${done} / ${a.entries.length}</span>
       <button class="iconbtn" data-act="sessMenu" aria-label="Options de la séance">${I.more}</button></div>
     ${warn}
-    ${a.entries.length ? a.entries.map(accItem).join('') : '<div class="empty"><p>Séance libre : ajoute les exercices que tu fais aujourd\'hui.</p></div>'}
+    ${a.entries.length ? a.entries.map((e, i) => accItem(e, i) + exRestSep(e, i)).join('') : '<div class="empty"><p>Séance libre : ajoute les exercices que tu fais aujourd\'hui.</p></div>'}
     <button class="btn ${a.entries.length ? 'ghost' : ''}" data-act="sessAdd">+ Ajouter un exercice</button>
   </div><div class="dock" id="dock">${dockHtml()}</div>`;
 }
@@ -509,24 +509,32 @@ function accItem(e, i) {
   const head = isTime
     ? '<div class="set time head"><span></span><span>secondes</span></div>'
     : '<div class="set head"><span></span><span>kg</span><span>reps</span></div>';
+  const rest = restFor(ex);
+  const canRemove = e.sets.length > 1;
+  // Série glissable vers la gauche pour faire apparaître « Retirer » (au moins une série reste)
+  const wrap = (j, row) => canRemove
+    ? `<div class="swipe srow"><button class="swipe-del" data-act="rmSet" data-i="${i}" data-j="${j}" aria-label="Retirer la série ${j + 1}">Retirer</button>${row.replace('class="set ', 'class="sset set ')}</div>`
+    : row;
+  const sep = (j) => j < e.sets.length - 1 && rest ? `<div class="restsep" aria-hidden="true"><span>récup ${clock(rest * 1000)}</span></div>` : '';
   const rows = e.sets.map((s, j) => {
     const cls = ['set', isTime ? 'time' : '', s.done ? 'done' : '', s.flag ? 'flag' : '', j === cur && !e.skipped ? 'cur' : ''].join(' ');
     const btn = `<button class="chk" data-act="toggleSet" data-i="${i}" data-j="${j}" aria-label="Série ${j + 1}, ${s.done ? 'faite' : 'à faire'}">${s.done ? '✓' : j + 1}</button>`;
     if (isTime) {
-      return `<div class="${cls}">${btn}<input inputmode="numeric" data-set data-i="${i}" data-j="${j}" data-f="secs" value="${s.secs ?? ''}" aria-label="Durée en secondes, série ${j + 1}"></div>`;
+      return wrap(j, `<div class="${cls}">${btn}<input inputmode="numeric" data-set data-i="${i}" data-j="${j}" data-f="secs" value="${s.secs ?? ''}" aria-label="Durée en secondes, série ${j + 1}"></div>`) + sep(j);
     }
     const kg = ex?.bodyweight ? '<span class="pdc">PDC</span>'
       : `<input inputmode="decimal" data-set data-i="${i}" data-j="${j}" data-f="kg" value="${fnum(s.kg)}" placeholder="kg" aria-label="Charge en kg, série ${j + 1}">`;
-    return `<div class="${cls}">${btn}${kg}<input inputmode="numeric" data-set data-i="${i}" data-j="${j}" data-f="reps" value="${s.reps ?? ''}" aria-label="Répétitions, série ${j + 1}"></div>`;
+    return wrap(j, `<div class="${cls}">${btn}${kg}<input inputmode="numeric" data-set data-i="${i}" data-j="${j}" data-f="reps" value="${s.reps ?? ''}" aria-label="Répétitions, série ${j + 1}"></div>`) + sep(j);
   }).join('');
   const st = ex?.status || 'ok';
   return `<section class="accx open" aria-label="${esc(exName(ex))}">
     <button class="accx-h" data-act="openEntry" data-i="-1" aria-label="Replier">${'<span class="chev" aria-hidden="true">⌃</span>'}${thumb(ex, 'thumb xs')}
-      <span class="t"><strong>${esc(exName(ex))}</strong><span class="small">${d}/${n}${ex?.perSide ? ' · par côté' : ''} · <span class="c-${st}">${STATUS[st].label}</span></span></span></button>
+      <span class="t"><strong>${esc(exName(ex))}</strong><span class="small">${d}/${n}${ex?.perSide ? ' · par côté' : ''} · récup ${rest ? clock(rest * 1000) : 'aucune'} · <span class="c-${st}">${STATUS[st].label}</span></span></span></button>
     ${ex?.cue ? `<div class="note ${st === 'warn' ? '' : 'tip'}"><strong>Kiné :</strong> ${esc(ex.cue)}</div>` : ''}
     ${e.suggest ? `<div class="sugg ${e.suggest.type}"><span>${esc(e.suggest.text)}</span>${e.suggest.type === 'up' && !e.applied ? `<button class="link" data-act="applyUp" data-i="${i}">Appliquer</button>` : ''}</div>` : ''}
     ${lastTime(e.exId, a.start)}
     <div class="sets">${head}${rows}</div>
+    ${canRemove && !S.settings.swipeHintSeen ? '<span class="small swipe-hint">Glisse une série vers la gauche pour la retirer.</span>' : ''}
     <div class="row between"><button class="link" data-act="addSet" data-i="${i}">+ Ajouter une série</button>${complete ? '' : `<button class="link muted" data-act="skipEntry" data-i="${i}">Passer l'exercice</button>`}</div>
     ${complete && !e.skipped ? `<div class="stack-s"><span class="small">Ressenti à chaud</span><div class="segb-row">${Object.keys(FEEL).map((k) =>
       `<button class="segb ${e.feel === k ? 'on' : ''}" data-act="feel" data-i="${i}" data-v="${k}" aria-pressed="${e.feel === k}">${FEEL[k].label}</button>`).join('')}</div></div>` : ''}
@@ -534,18 +542,27 @@ function accItem(e, i) {
   </section>`;
 }
 
+// Récup après la dernière série d'un exercice, avant le suivant
+function exRestSep(e, i) {
+  const a = S.active;
+  if (i >= a.entries.length - 1) return '';
+  const r = restFor(exById(e.exId));
+  return `<div class="restsep ex" aria-hidden="true"><span>${r ? `récup ${clock(r * 1000)} avant l'exercice suivant` : 'enchaîne sur l\'exercice suivant'}</span></div>`;
+}
+
 function lastTime(exId, before) {
   const h = entryHistory(exId, before, 1)[0];
   if (!h) return '';
   const sets = h.e.sets.filter((x) => x.done);
   if (!sets.length) return '';
+  const bw = exById(exId)?.bodyweight;
   let txt;
   if (sets.every((x) => x.secs != null && x.reps == null)) txt = `${sets.map((x) => x.secs).join(', ')} s`;
   else {
     const kgs = [...new Set(sets.map((x) => x.kg))];
     txt = kgs.length === 1
-      ? `${kgs[0] != null ? fnum(kgs[0]) + ' kg' : 'PDC'} × ${sets.map((x) => x.reps).join(', ')}`
-      : sets.map((x) => `${x.kg != null ? fnum(x.kg) : 'PDC'} × ${x.reps}`).join(' · ');
+      ? `${kgs[0] != null ? fnum(kgs[0]) + ' kg' : bw ? 'PDC' : '—'} × ${sets.map((x) => x.reps).join(', ')}`
+      : sets.map((x) => `${x.kg != null ? fnum(x.kg) : bw ? 'PDC' : '—'} × ${x.reps}`).join(' · ');
   }
   const flags = sets.filter((x) => x.flag).length;
   return `<div class="last small"><span>Dernière fois (${dShort(h.s.start)})</span><strong class="mono">${txt}</strong>${flags ? `<span class="c-warn">${flags} « ça tire »</span>` : ''}</div>`;
@@ -647,9 +664,28 @@ function vLog() {
   out += `<div class="segb-row" style="grid-template-columns:1fr 1fr">${[['bilan', 'Bilan'], ['history', 'Historique']].map(([k, l]) =>
     `<button class="segb ${logTab === k ? 'on' : ''}" data-act="logTab" data-v="${k}" aria-pressed="${logTab === k}">${l}</button>`).join('')}</div>`;
   out += logTab === 'bilan'
-    ? totalsCard() + weeksCard() + weekCard() + painDailyCard() + j1Insights() + weightCard() + lastSessionCard()
+    ? discomfortCard() + totalsCard() + weeksCard() + weekCard() + painDailyCard() + j1Insights() + weightCard() + lastSessionCard()
     : historyList();
   return `<div class="stack">${out}</div>`;
+}
+
+// Signes de gêne d'une séance : « ça tire », douleur au‑dessus du seuil juste après ou le lendemain, fourmillements
+function issuesOf(s) {
+  const flagged = s.entries.filter((e) => e.sets.some((x) => x.flag));
+  const out = [];
+  if (flagged.length) out.push(`${flagged.reduce((n, e) => n + e.sets.filter((x) => x.flag).length, 0)} « ça tire »`);
+  if (s.painAfter?.eva > th()) out.push(`${s.painAfter.eva}/10 juste après`);
+  if (s.j1?.eva > th()) out.push(`${s.j1.eva}/10 le lendemain`);
+  if (s.j1?.leg || s.painBefore?.tingling) out.push('jambe ou fourmillements');
+  return { list: out, exercises: flagged.map((e) => exById(e.exId)?.name || e.name).filter(Boolean) };
+}
+function discomfortCard() {
+  const recent = S.sessions.filter((s) => s.start > Date.now() - 30 * DAY_MS).map((s) => ({ s, ...issuesOf(s) })).filter((x) => x.list.length).reverse();
+  if (!recent.length) return '';
+  return `<div class="card warnb"><span class="chip warn" style="justify-self:start"><span class="dot"></span>${recent.length} séance${recent.length > 1 ? 's' : ''} avec gêne · 30 jours</span>
+    ${recent.slice(0, 4).map(({ s, list, exercises }) => `<a class="alertrow" href="#log/${s.id}"><strong>${cap(dShort(s.start))} · ${esc(s.name)}</strong><span class="small">${list.join(' · ')}${exercises.length ? ` — ${exercises.map(esc).join(', ')}` : ''}</span></a>`).join('')}
+    ${recent.length > 4 ? `<button class="link" style="justify-self:start" data-act="logTab" data-v="history">Voir les ${recent.length} séances</button>` : ''}
+    <span class="small">Si une gêne revient sur le même exercice, parles‑en à ta kiné.</span></div>`;
 }
 
 function totalsCard() {
@@ -760,9 +796,10 @@ function historyList() {
     let j1 = '';
     if (s.j1) j1 = `<span class="chip ${s.j1.eva > th() ? 'warn' : 'ok'}"><span class="dot"></span>J+1 · ${s.j1.eva}</span>`;
     else if (Date.now() - s.end < 4 * DAY_MS) j1 = '<span class="chip">J+1 · en attente</span>';
-    out += `<a class="logrow" href="#log/${s.id}"><span class="d"><strong>${String(d.getDate()).padStart(2, '0')}</strong><span>${DAY_S[d.getDay()]}</span></span>
+    const iss = issuesOf(s);
+    out += `<a class="logrow ${iss.list.length ? 'alert' : ''}" href="#log/${s.id}"><span class="d"><strong>${String(d.getDate()).padStart(2, '0')}</strong><span>${DAY_S[d.getDay()]}</span></span>
       <span class="t"><strong>${esc(s.name)}</strong><span class="small mono">${mins(s.end - s.start)} min · ${sessionPainLine(s)}</span>
-      <span class="row wrap" style="gap:4px;margin-top:4px">${j1}${topFeel ? `<span class="chip ${FEEL[topFeel].cls}">${FEEL[topFeel].label}</span>` : ''}${flags ? `<span class="chip">${flags} « ça tire »</span>` : ''}</span></span></a>`;
+      <span class="row wrap" style="gap:4px;margin-top:4px">${j1}${topFeel ? `<span class="chip ${FEEL[topFeel].cls}">${FEEL[topFeel].label}</span>` : ''}${iss.list.length ? `<span class="chip warn"><span class="dot"></span>Gêne</span>` : ''}${flags ? `<span class="chip">${flags} « ça tire »</span>` : ''}</span></span></a>`;
   }
   return out;
 }
@@ -862,7 +899,7 @@ function vLogDetail(id) {
       if (!x.done) return `<div class="nb skip"><span>${j + 1}</span><span>non faite</span><span></span></div>`;
       k++;
       const p = pDone[k];
-      const val = isTime ? fmtSecs(x.secs) : `${x.kg != null ? fnum(x.kg) : 'PDC'} × ${x.reps ?? '—'}`;
+      const val = isTime ? fmtSecs(x.secs) : `${x.kg != null ? fnum(x.kg) : ex?.bodyweight ? 'PDC' : '—'} × ${x.reps ?? '—'}`;
       let cmp = '<span class="eq">—</span>';
       if (x.flag) cmp = '<span class="dn">⚑ gêne</span>';
       else if (p) {
@@ -891,6 +928,7 @@ function vLogDetail(id) {
     <div><span class="small">${dLong(s.start)}</span><h1 class="h1">${esc(s.name)}</h1></div>
     <div class="row wrap" style="gap:6px"><span class="chip">${mins(s.end - s.start)} min</span><span class="chip">${sessionPainLine(s)}</span>${j1}${vol ? `<span class="chip">${fnum(vol)} kg soulevés</span>` : ''}</div>
     ${zones.length || pb.tingling ? `<span class="small">Avant la séance : ${zones.join(', ') || '—'}${pb.tingling ? ', fourmillements' : ''}</span>` : ''}
+    ${(() => { const iss = issuesOf(s); return iss.list.length ? `<div class="note"><strong>Gêne pendant ou après cette séance :</strong> ${iss.list.join(' · ')}${iss.exercises.length ? `. Exercice${iss.exercises.length > 1 ? 's' : ''} concerné${iss.exercises.length > 1 ? 's' : ''} : ${iss.exercises.map(esc).join(', ')}` : ''}.</div>` : ''; })()}
     ${canJ1 ? `<button class="btn" data-act="j1" data-id="${s.id}">Faire le bilan du lendemain</button>` : ''}
     ${j1Detail}
     ${entries}
@@ -1484,6 +1522,16 @@ const acts = {
     commit(); render();
     toast("Noté sur la série. Baisse la charge, réduis l'amplitude ou passe l'exercice.");
   },
+  rmSet: (el) => {
+    const a = S.active;
+    const i = +el.dataset.i, j = +el.dataset.j;
+    const e = a.entries[i];
+    if (!e || e.sets.length < 2) return;
+    if (a.hold && a.hold.i === i) a.hold = null;
+    const [removed] = e.sets.splice(j, 1);
+    commit(); render();
+    toast(`Série ${j + 1} retirée.`, { label: 'Annuler', fn: () => { if (S.active === a) { e.sets.splice(j, 0, removed); commit(); render(); } } });
+  },
   addSet: (el) => {
     const e = S.active.entries[+el.dataset.i];
     const last = e.sets[e.sets.length - 1] || {};
@@ -1679,10 +1727,11 @@ document.addEventListener('input', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sheetEl.hidden) closeSheet(); });
 
 /* Gestes sur les cartes de séance : appui long = actions, glisser à gauche = supprimer */
-const OPEN_W = 104;
+const SWIPE_SEL = '.tcard, .sset';
+const openW = (c) => (c.classList.contains('sset') ? 92 : 104);
 const g = { el: null, x0: 0, y0: 0, dx: 0, base: 0, mode: null, timer: null, suppress: false };
 function closeSwipes(except) {
-  app.querySelectorAll('.tcard.open').forEach((c) => {
+  app.querySelectorAll('.tcard.open, .sset.open').forEach((c) => {
     if (c === except) return;
     c.classList.remove('open'); c.style.transform = '';
     setTimeout(() => { if (!c.classList.contains('open')) c.parentElement?.classList.remove('revealed'); }, 220);
@@ -1699,13 +1748,14 @@ function longPress(id) {
 }
 document.addEventListener('pointerdown', (e) => {
   if (e.target.closest('.swipe-del')) return;
-  const c = e.target.closest('.tcard');
+  const c = e.target.closest(SWIPE_SEL);
   if (!c) { closeSwipes(); return; }
   if (e.target.closest('[data-act="tplMenu"]') || (e.pointerType === 'mouse' && e.button !== 0)) return;
   closeSwipes(c);
-  Object.assign(g, { el: c, x0: e.clientX, y0: e.clientY, dx: 0, base: c.classList.contains('open') ? -OPEN_W : 0, mode: null });
+  Object.assign(g, { el: c, x0: e.clientX, y0: e.clientY, dx: 0, base: c.classList.contains('open') ? -openW(c) : 0, mode: null });
   clearTimeout(g.timer);
-  g.timer = setTimeout(() => { if (g.el === c && g.mode === null) longPress(c.dataset.press); }, 500);
+  // L'appui long n'existe que sur les cartes de séance
+  if (c.classList.contains('tcard')) g.timer = setTimeout(() => { if (g.el === c && g.mode === null) longPress(c.dataset.press); }, 500);
 });
 document.addEventListener('pointermove', (e) => {
   if (!g.el || g.mode === 'press' || g.mode === 'scroll') return;
@@ -1717,10 +1767,11 @@ document.addEventListener('pointermove', (e) => {
     g.mode = 'swipe';
     g.el.classList.add('dragging');
     g.el.parentElement.classList.add('revealed');
+    document.activeElement?.blur?.();
     try { g.el.setPointerCapture(e.pointerId); } catch { /* */ }
   }
   g.dx = dx;
-  const x = Math.min(0, Math.max(-OPEN_W * 1.5, g.base + dx));
+  const x = Math.min(0, Math.max(-openW(g.el) * 1.5, g.base + dx));
   g.el.style.transform = `translateX(${x}px)`;
 });
 function endGesture() {
@@ -1729,7 +1780,10 @@ function endGesture() {
   if (c && g.mode === 'swipe') {
     suppressNextClick();
     c.classList.remove('dragging');
-    if (g.base + g.dx < -OPEN_W / 2) { c.classList.add('open'); c.style.transform = `translateX(${-OPEN_W}px)`; }
+    if (g.base + g.dx < -openW(c) / 2) {
+      c.classList.add('open'); c.style.transform = `translateX(${-openW(c)}px)`;
+      if (c.classList.contains('sset') && !S.settings.swipeHintSeen) { S.settings.swipeHintSeen = true; commit(); }
+    }
     else { c.classList.add('open'); closeSwipes(); }
   }
   g.el = null;

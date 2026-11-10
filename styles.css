@@ -426,3 +426,29 @@ button.chip { min-height: 34px; }
 .painrow .pv.hi { background: var(--warn-soft); color: var(--warn); }
 .painrow strong { font-size: .92rem; }
 .seg.two { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+
+/* Retirer une série, récup entre séries */
+.swipe.srow { border-radius: 10px; }
+.srow .swipe-del { width: 92px; border-radius: 0 10px 10px 0; font-size: .9rem; }
+.sset { position: relative; background: var(--surface); touch-action: pan-y; transition: transform .2s ease; }
+.sset.dragging { transition: none; }
+@media (prefers-reduced-motion: reduce) { .sset { transition: none; } }
+.swipe-hint { text-align: center; }
+.restsep { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .74rem; padding-left: 54px; }
+.restsep::before, .restsep::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.restsep::before { flex: 0 0 10px; }
+.restsep.ex { padding-left: 0; justify-content: center; margin-block: -4px; }
+.restsep.ex::before { flex: 1; }
+
+/* Chrono collé en haut pendant la séance */
+.sess-top {
+  position: sticky; top: 0; z-index: 15; background: var(--bg);
+  margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
+  margin-top: -12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Alertes de gêne */
+.alertrow { display: grid; gap: 2px; padding: 8px 0; border-top: 1px solid var(--line); text-decoration: none; color: inherit; }
+.logrow.alert { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }

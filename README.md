@@ -15,7 +15,8 @@ Aucune dépendance installée et aucune étape de build : ce sont des fichiers s
   - séance libre, sans modèle.
 - **Séance en cours** :
   - point douleur avant de commencer, avec alerte au‑dessus du seuil ;
-  - tous les exercices en accordéon, et la possibilité d'en ajouter en cours de séance ;
+  - chrono collé en haut de l'écran, tous les exercices en accordéon, et la possibilité d'en ajouter en cours de séance ;
+  - récup affichée entre chaque série et chaque exercice, séries supprimables en les glissant vers la gauche (avec Annuler) ;
   - « Dernière fois » sous chaque exercice, charges arrondies à une décimale ;
   - séries pré‑remplies avec la dernière charge, un bouton « Valider la série » protégé contre le double tap ;
   - minuteur de tenue pour les exercices en durée (planche, gainage), côté par côté ;
@@ -26,7 +27,7 @@ Aucune dépendance installée et aucune étape de build : ce sont des fichiers s
 - **Douleur à tout moment** : bouton « Noter » sur l'accueil et dans le Bilan (douleur, zone, moment, ce qui a pu jouer, date modifiable). Courbe sur 14 et 30 jours avec ton seuil, relevés mêlés à l'historique.
 - **Bilan J+1** : le lendemain dès 5 h, douleur au réveil, raideur, jambe, et ce qui a pu jouer.
 - **Carnet**, en deux onglets :
-  - **Bilan** : totaux, séances par semaine avec l'objectif, semaine en cours, douleur au réveil et pistes à surveiller, poids, dernière séance ;
+  - **Bilan** : alerte sur les séances avec gêne (« ça tire », douleur au‑dessus du seuil juste après ou le lendemain, fourmillements), totaux, séances par semaine avec l'objectif, semaine en cours, douleur au réveil et pistes à surveiller, poids, dernière séance ;
   - **Historique** : chaque séance série par série, comparée à la fois précédente.
 - **Plus** :
   - **bibliothèque d'exercices** : groupes musculaires (tags et filtre), pictogramme ou photo, statut kiné modifiable et daté ;
