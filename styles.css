@@ -452,3 +452,4 @@ button.chip { min-height: 34px; }
 /* Alertes de gêne */
 .alertrow { display: grid; gap: 2px; padding: 8px 0; border-top: 1px solid var(--line); text-decoration: none; color: inherit; }
 .logrow.alert { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
+.alert-tag { justify-self: start; min-height: 36px; padding: 6px 12px; }

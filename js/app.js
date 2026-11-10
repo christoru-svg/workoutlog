@@ -682,10 +682,8 @@ function issuesOf(s) {
 function discomfortCard() {
   const recent = S.sessions.filter((s) => s.start > Date.now() - 30 * DAY_MS).map((s) => ({ s, ...issuesOf(s) })).filter((x) => x.list.length).reverse();
   if (!recent.length) return '';
-  return `<div class="card warnb"><span class="chip warn" style="justify-self:start"><span class="dot"></span>${recent.length} séance${recent.length > 1 ? 's' : ''} avec gêne · 30 jours</span>
-    ${recent.slice(0, 4).map(({ s, list, exercises }) => `<a class="alertrow" href="#log/${s.id}"><strong>${cap(dShort(s.start))} · ${esc(s.name)}</strong><span class="small">${list.join(' · ')}${exercises.length ? ` — ${exercises.map(esc).join(', ')}` : ''}</span></a>`).join('')}
-    ${recent.length > 4 ? `<button class="link" style="justify-self:start" data-act="logTab" data-v="history">Voir les ${recent.length} séances</button>` : ''}
-    <span class="small">Si une gêne revient sur le même exercice, parles‑en à ta kiné.</span></div>`;
+  // Juste le tag : il ouvre l'historique, où les séances concernées sont marquées
+  return `<button class="chip warn alert-tag" data-act="logTab" data-v="history"><span class="dot"></span>${recent.length} séance${recent.length > 1 ? 's' : ''} avec gêne · 30 jours</button>`;
 }
 
 function totalsCard() {
@@ -767,6 +765,7 @@ function lastSessionCard() {
   const vol = volume(s);
   return `<div class="card"><div class="row between"><span class="small">Dernière séance</span><button class="link" data-act="logTab" data-v="history">Tout l'historique</button></div>
     <a href="#log/${s.id}" style="text-decoration:none;display:grid;gap:6px"><strong class="h2">${esc(s.name)}</strong>
+    ${issuesOf(s).list.length ? '<span class="chip warn" style="justify-self:start"><span class="dot"></span>Gêne</span>' : ''}
     <div class="kpis small-kpis"><div><strong>${cap(dShort(s.start))}</strong><span>date</span></div><div><strong>${mins(s.end - s.start)} min</strong><span>durée</span></div><div><strong>${s.j1 ? s.j1.eva : '—'}</strong><span>douleur J+1</span></div></div>
     ${vol ? `<span class="small">${nf.format(Math.round(vol))} kg soulevés</span>` : ''}</a></div>`;
 }
