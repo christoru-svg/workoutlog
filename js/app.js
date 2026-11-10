@@ -99,7 +99,7 @@ function fmtTarget(ex) {
   return s;
 }
 
-function commit() { save(S); }
+function commit() { S.updatedAt = Date.now(); save(S); scheduleSync(); }
 const fmtSecs = (v) => (v == null ? '—' : v >= 120 && v % 60 === 0 ? `${v / 60} min` : `${v} s`);
 
 let undoFn = null;
@@ -284,13 +284,20 @@ function vHome() {
   } else if (!S.templates.length) {
     out += `<div class="card"><strong>Aucune séance pour l'instant</strong><span class="small">Crée ta première séance à partir de tes exercices.</span><button class="btn" data-act="newTpl">Créer une séance</button></div>`;
   }
-  out += backupCard();
+  out += cloudCard();
+  if (!user) out += backupCard();
   out += painTrend();
   out += `<div class="grid2"><button class="btn ghost" data-act="newEx">+ Exercice</button><button class="btn ghost" data-act="newTpl">+ Séance</button></div>`;
   return `<div class="stack">${out}</div>`;
 }
 
 // Rappel d'export toutes les 4 semaines dès qu'il y a des séances à protéger
+function cloudCard() {
+  if (user || (S.settings.cloudSnooze || 0) > Date.now()) return '';
+  return `<div class="card hl"><strong>Ne perds plus tes données</strong>
+    <span class="small">Connecte‑toi avec Google : tout est sauvegardé en ligne automatiquement, et revient si tu vides ton navigateur ou changes de téléphone.</span>
+    <div class="row"><button class="btn sm" data-act="cloudSignIn">Se connecter avec Google</button><button class="btn sm ghost" data-act="cloudLater">Plus tard</button></div></div>`;
+}
 function backupDue() {
   if (!S.sessions.length) return false;
   const now = Date.now();
@@ -936,7 +943,8 @@ function vOnboarding() {
        <div class="obpoint"><span class="chip acc">1</span><span>Deux séances par semaine, en séries de 15 à charge modérée.</span></div>
        <div class="obpoint"><span class="chip acc">2</span><span>Chaque exercice porte le statut donné par ta kiné.</span></div>
        <div class="obpoint"><span class="chip acc">3</span><span>Ta douleur est notée avant, juste après, et le lendemain matin.</span></div>
-     </div>`,
+     </div>
+     ${user ? '' : '<div class="card"><strong>Tu as déjà utilisé l\'app ?</strong><span class="small">Connecte‑toi pour récupérer tes données.</span><button class="btn sm ghost" style="justify-self:start" data-act="cloudSignIn">Se connecter avec Google</button></div>'}`,
     `<span class="eyebrow">Tes jours</span><h1 class="h1">Quand vas‑tu à la salle ?</h1>
      <p class="small">L'accueil te proposera la bonne séance le bon jour. Tu pourras changer à tout moment, même pour une seule semaine.</p>
      ${S.templates.map(dayOpts).join('')}`,
@@ -953,7 +961,10 @@ function vOnboarding() {
      <p class="small">Au‑dessus de ce seuil le lendemain, l'app ne propose plus d'augmenter la charge et signale la séance. À régler avec ta kiné.</p>`,
     `<span class="eyebrow">Avant de commencer</span><h1 class="h1">Deux choses à savoir</h1>
      <div class="note"><strong>Signaux d'alerte :</strong> perte de force dans la jambe, engourdissement du périnée ou de l'entrejambe, troubles urinaires ou intestinaux. Arrête la séance et consulte rapidement un médecin.</div>
-     <div class="note tip"><strong>Tes données restent sur ce téléphone,</strong> sans compte. L'app te rappellera d'exporter une sauvegarde de temps en temps.</div>`,
+     ${user
+       ? `<div class="note tip"><strong>Sauvegarde en ligne activée</strong> avec ${esc(user.email || 'ton compte Google')}.</div>`
+       : `<div class="note tip"><strong>Sauvegarde en ligne :</strong> connecte‑toi avec Google pour que tes données restent même si tu vides ton navigateur.</div>
+          <button class="btn ghost" data-act="cloudSignIn">Se connecter avec Google</button>`}`,
   ];
   const last = obStep === OB_STEPS - 1;
   return `<div class="ob">
@@ -986,11 +997,17 @@ function vSettings() {
     <div class="card"><label class="field"><span>Repos entre les séries</span>
       <select data-setting="restSec">${[45, 60, 75, 90, 120, 150, 180].map((v) => `<option value="${v}" ${S.settings.restSec === v ? 'selected' : ''}>${clock(v * 1000)}</option>`).join('')}</select></label></div>
     <div class="card"><strong>Bilan du lendemain</strong><p class="small">Le matin qui suit une séance, une carte « Bilan du lendemain » t'attend à l'ouverture de l'app, sur l'accueil et dans le carnet.</p></div>
-    <div class="card"><strong>Sauvegarde</strong><p class="small">Tes données restent sur ce téléphone, sans compte. Exporte‑les de temps en temps pour ne rien perdre si tu changes de téléphone.</p>
-      <div class="row wrap"><button class="btn sm" data-act="export">Exporter (JSON)</button><label class="btn sm ghost"><input type="file" accept="application/json,.json" data-import hidden>Importer</label></div></div>
+    <div class="card"><strong>Sauvegarde en ligne</strong>
+      ${user
+        ? `<p class="small">Connecté avec ${esc(user.email || user.name || 'Google')}. Tout est sauvegardé automatiquement après chaque modification.</p>${syncStatus()}
+           <div class="row wrap"><button class="btn sm ghost" data-act="cloudSync">Synchroniser maintenant</button><button class="btn sm ghost" data-act="cloudSignOut">Se déconnecter</button></div>`
+        : `<p class="small">Connecte‑toi avec Google pour sauvegarder automatiquement tes données. Si tu vides ton navigateur ou changes de téléphone, tu te reconnectes et tout revient.</p>
+           <button class="btn sm" style="justify-self:start" data-act="cloudSignIn">Se connecter avec Google</button>`}</div>
+    <div class="card"><strong>Copie de secours</strong><p class="small">Un fichier avec toutes tes données, à ranger dans Google Drive, tes e‑mails ou tes fichiers.</p>
+      <div class="row wrap"><button class="btn sm" data-act="export">Sauvegarder une copie</button><label class="btn sm ghost"><input type="file" accept="application/json,.json" data-import hidden>Importer une copie</label></div></div>
     <div class="card"><strong>Signaux d'alerte</strong><p class="small">Perte de force dans la jambe, engourdissement du périnée ou de l'entrejambe, troubles urinaires ou intestinaux : arrête la séance et consulte rapidement un médecin.</p></div>
     <div class="card"><strong>Présentation</strong><p class="small">Revoir les écrans d'accueil : tes jours, les statuts kiné, le seuil et les signaux d'alerte.</p><button class="btn sm ghost" style="justify-self:start" data-act="obReplay">Revoir la présentation</button></div>
-    <div class="card"><strong>Réinitialiser</strong><p class="small">Efface tout et recharge le programme de départ.</p><button class="btn sm danger" style="justify-self:start" data-act="reset">Tout effacer</button></div>
+    <div class="card"><strong>Réinitialiser</strong><p class="small">Efface tout et recharge le programme de départ${user ? ', y compris la sauvegarde en ligne' : ''}.</p><button class="btn sm danger" style="justify-self:start" data-act="reset">Tout effacer</button></div>
     </div>`;
 }
 
@@ -1089,6 +1106,10 @@ function openExSheet(id, opts = {}) {
       <input type="hidden" name="picto" value="${esc(ex.picto || 'none')}"></div>
     <div class="row wrap"><button class="btn sm" type="submit">Enregistrer</button>${id ? `<button class="btn sm danger" type="button" data-act="exDelete" data-id="${id}">Supprimer</button>` : ''}</div>
   </form>`, id ? "Modifier l'exercice" : 'Nouvel exercice');
+}
+function tomb(coll, id) {
+  S.deleted ||= { sessions: [], painLogs: [] };
+  (S.deleted[coll] ||= []).push(id);
 }
 // Garde l'ordre d'origine (groupe principal en tête), ajoute les nouveaux groupes à la fin
 function orderMuscles(picked, before = []) {
@@ -1360,6 +1381,7 @@ const acts = {
   painDel: (el) => {
     if (!armed(el, 'Confirmer la suppression')) return;
     S.painLogs = (S.painLogs || []).filter((x) => x.id !== el.dataset.id);
+    tomb('painLogs', el.dataset.id);
     commit(); closeSheet(); render(); toast('Relevé supprimé.');
   },
   weightDel: (el) => {
@@ -1489,17 +1511,46 @@ const acts = {
   delSession: (el) => {
     if (!armed(el, 'Confirmer la suppression')) return;
     S.sessions = S.sessions.filter((s) => s.id !== el.dataset.id);
+    tomb('sessions', el.dataset.id);
     commit(); location.hash = '#log'; toast('Séance supprimée.');
   },
+  cloudSignIn: async (el) => {
+    el.disabled = true;
+    try {
+      const m = await loadCloud();
+      await m.signIn();
+    } catch (e) {
+      el.disabled = false;
+      if (e?.code === 'auth/popup-closed-by-user' || e?.code === 'auth/cancelled-popup-request') return;
+      toast(e?.code === 'auth/unauthorized-domain'
+        ? 'Ce site n\'est pas autorisé dans Firebase (Authentication › Paramètres › Domaines autorisés).'
+        : !navigator.onLine ? 'Pas de réseau : réessaie une fois connecté.' : `Connexion impossible (${e?.code || 'erreur'}).`);
+    }
+  },
+  cloudSignOut: async (el) => {
+    if (!armed(el, 'Confirmer la déconnexion')) return;
+    pushNow();
+    await cloud?.signOutUser();
+    toast('Déconnecté. Tes données restent sur ce téléphone.');
+  },
+  cloudSync: () => { if (user) onUser(user); },
+  cloudLater: () => { S.settings.cloudSnooze = Date.now() + 14 * 864e5; commit(); render(); },
   backupLater: () => { S.settings.backupSnooze = Date.now() + 7 * 864e5; commit(); render(); },
-  export: () => {
-    const blob = new Blob([JSON.stringify({ ...S, photos: Object.fromEntries(photos) }, null, 2)], { type: 'application/json' });
+  export: async () => {
+    const json = JSON.stringify({ ...S, photos: Object.fromEntries(photos) }, null, 2);
+    const name = `workout-log-${new Date().toISOString().slice(0, 10)}.json`;
     S.settings.lastExport = Date.now();
     commit();
     if (route().v === 'home') render();
+    // Sur téléphone : menu de partage (Drive, Gmail, Fichiers…). Sinon : téléchargement.
+    try {
+      const file = new File([json], name, { type: 'application/json' });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'Sauvegarde Workout Log' }); return; }
+    } catch (e) { if (e?.name === 'AbortError') return; }
+    const blob = new Blob([json], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `workout-log-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   },
@@ -1700,7 +1751,7 @@ document.addEventListener('contextmenu', (e) => {
 
 window.addEventListener('hashchange', () => { closeSheet(); render(); window.scrollTo(0, 0); });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') flush();
+  if (document.visibilityState === 'hidden') { flush(); pushNow(); }
   else if (S) { render(); }
 });
 window.addEventListener('pagehide', () => flush());
@@ -1752,6 +1803,147 @@ function movePhotos() {
   if (moved) commit();
 }
 
+/* ---------- Synchronisation cloud ---------- */
+let cloud = null;           // module js/cloud.js, chargé à la demande
+let user = null;            // { uid, email, name } une fois connecté
+let sync = { state: 'off', last: 0, error: '' };
+let syncTimer = null;
+let pushed = null;          // dernière version envoyée de chaque document (pour n'envoyer que les changements)
+const clean = (o) => JSON.parse(JSON.stringify(o ?? null));
+const photoSig = (d) => `${d.length}:${d.slice(-40)}`;
+
+function coreOf(st) {
+  return clean({
+    version: st.version, seedVersion: st.seedVersion, onboarded: st.onboarded, settings: st.settings,
+    exercises: st.exercises, templates: st.templates, weights: st.weights || [], active: st.active ?? null,
+    deleted: st.deleted || { sessions: [], painLogs: [] }, updatedAt: st.updatedAt || 0,
+  });
+}
+function resetPushed() { pushed = { core: null, sessions: new Map(), painLogs: new Map(), photos: new Map() }; }
+
+function computeOps() {
+  const ops = [];
+  const c = JSON.stringify(coreOf(S));
+  if (c !== pushed.core) { ops.push({ data: JSON.parse(c) }); pushed.core = c; }
+  for (const coll of ['sessions', 'painLogs']) {
+    const m = pushed[coll];
+    const ids = new Set();
+    for (const x of S[coll] || []) {
+      ids.add(x.id);
+      const j = JSON.stringify(clean(x));
+      if (m.get(x.id) !== j) { ops.push({ coll, id: x.id, data: JSON.parse(j) }); m.set(x.id, j); }
+    }
+    for (const id of [...m.keys()]) if (!ids.has(id)) { ops.push({ coll, id, del: true }); m.delete(id); }
+  }
+  for (const [id, d] of photos) {
+    if (pushed.photos.get(id) !== photoSig(d)) { ops.push({ coll: 'photos', id, data: { data: d } }); pushed.photos.set(id, photoSig(d)); }
+  }
+  for (const id of [...pushed.photos.keys()]) if (!photos.has(id)) { ops.push({ coll: 'photos', id, del: true }); pushed.photos.delete(id); }
+  return ops;
+}
+
+function scheduleSync() {
+  if (!user || !pushed) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(pushNow, 1500);
+}
+function pushNow() {
+  clearTimeout(syncTimer);
+  if (!user || !pushed || !cloud) return;
+  const ops = computeOps();
+  if (!ops.length) return;
+  setSync('syncing');
+  cloud.pushOps(user.uid, ops)
+    .then(() => setSync('ok'))
+    .catch((e) => { resetPushed(); setSync('error', e?.code || e?.message || 'inconnue'); });
+}
+function setSync(state, error = '') {
+  sync = { state, last: state === 'ok' ? Date.now() : sync.last, error };
+  const el = document.getElementById('sync-status');
+  if (el) el.outerHTML = syncStatus();
+}
+function syncStatus() {
+  const txt = !user ? '' : sync.state === 'syncing' ? 'Synchronisation…'
+    : sync.state === 'error' ? `Synchro en attente (${esc(sync.error)}). Tes données restent sur le téléphone et repartiront au retour du réseau.`
+    : sync.last ? `Synchronisé ${ago(sync.last) === "aujourd'hui" ? `à ${new Date(sync.last).toTimeString().slice(0, 5)}` : ago(sync.last)}`
+    : 'Connecté';
+  return `<span id="sync-status" class="small ${sync.state === 'error' ? 'c-warn' : ''}">${txt}</span>`;
+}
+
+// Fusion des données du téléphone et du cloud (au moment de la connexion ou au lancement)
+function mergeRemote(remote) {
+  const localEmpty = !S.sessions.length && !(S.painLogs || []).length && !(S.weights || []).length;
+  const rc = remote.core;
+  const del = {
+    sessions: [...new Set([...(S.deleted?.sessions || []), ...(rc?.deleted?.sessions || [])])],
+    painLogs: [...new Set([...(S.deleted?.painLogs || []), ...(rc?.deleted?.painLogs || [])])],
+  };
+  const union = (local, rem, gone) => {
+    const m = new Map();
+    for (const x of rem) if (!gone.includes(x.id)) m.set(x.id, x);
+    for (const x of local) {
+      if (gone.includes(x.id)) continue;
+      const r = m.get(x.id);
+      // Même séance des deux côtés : on garde celle qui a le bilan du lendemain, sinon la locale
+      if (!r || !(r.j1 && !x.j1)) m.set(x.id, x);
+    }
+    return [...m.values()];
+  };
+  const next = { ...S };
+  if (rc && (localEmpty || (rc.updatedAt || 0) > (S.updatedAt || 0))) {
+    Object.assign(next, {
+      version: rc.version, seedVersion: rc.seedVersion, onboarded: rc.onboarded || S.onboarded,
+      settings: rc.settings, exercises: rc.exercises, templates: rc.templates, active: S.active || rc.active || null,
+    });
+  }
+  const wm = new Map();
+  for (const w of [...(rc?.weights || []), ...(S.weights || [])]) wm.set(new Date(w.date).toDateString(), w);
+  next.weights = [...wm.values()].sort((a, b) => a.date - b.date);
+  next.sessions = union(S.sessions, remote.sessions, del.sessions).sort((a, b) => a.start - b.start);
+  next.painLogs = union(S.painLogs || [], remote.painLogs, del.painLogs).sort((a, b) => a.date - b.date);
+  next.deleted = del;
+  S = migrate(next);
+  for (const [id, d] of Object.entries(remote.photos || {})) {
+    if (typeof d === 'string' && d.startsWith('data:image/') && !photos.has(id)) { photos.set(id, d); putPhoto(id, d); }
+  }
+  // Ce qui est déjà dans le cloud n'a pas besoin d'être renvoyé
+  resetPushed();
+  if (rc) pushed.core = JSON.stringify(clean(rc));
+  for (const x of remote.sessions) pushed.sessions.set(x.id, JSON.stringify(clean(x)));
+  for (const x of remote.painLogs) pushed.painLogs.set(x.id, JSON.stringify(clean(x)));
+  for (const [id, d] of Object.entries(remote.photos || {})) if (typeof d === 'string') pushed.photos.set(id, photoSig(d));
+}
+
+async function onUser(u) {
+  user = u;
+  if (!u) { pushed = null; setSync('off'); render(); return; }
+  setSync('syncing');
+  try {
+    const remote = await cloud.pullAll(u.uid);
+    const had = remote.core || remote.sessions.length;
+    mergeRemote(remote);
+    save(S);
+    render();
+    pushNow();
+    if (!had) toast('Connecté. Tes données sont maintenant sauvegardées en ligne.');
+    else if (sync.state !== 'error') setSync('ok');
+  } catch (e) {
+    resetPushed();
+    setSync('error', e?.code || e?.message || 'inconnue');
+    render();
+  }
+}
+
+function loadCloud() {
+  if (cloud) return Promise.resolve(cloud);
+  return import('./cloud.js').then((m) => { cloud = m; return m.watchUser(onUser).then(() => m); });
+}
+
+// Accès de test, uniquement en développement local
+if (location.hostname === 'localhost') {
+  window.__wl = { get S() { return S; }, mergeRemote, computeOps, resetPushed, get pushed() { return pushed; } };
+}
+
 /* ---------- Démarrage ---------- */
 (async function init() {
   document.body.insertAdjacentHTML('afterbegin', SPRITE);
@@ -1772,5 +1964,8 @@ function movePhotos() {
   render();
   setInterval(tick, 500);
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
+  // Le cloud se charge après l'affichage : sans réseau, l'app reste utilisable et réessaie plus tard.
+  loadCloud().catch(() => { cloud = null; });
+  window.addEventListener('online', () => { if (!cloud) loadCloud().catch(() => {}); else if (user) onUser(user); });
   navigator.storage?.persist?.().catch(() => {});
 })();

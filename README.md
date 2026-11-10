@@ -2,7 +2,7 @@
 
 Carnet de muscu en PWA, pensé pour une hernie L5‑S1 : chaque exercice porte un statut validé par la kiné, la douleur est suivie avant et après la séance, et le lendemain matin (bilan J+1).
 
-Aucune dépendance et aucune étape de build : ce sont des fichiers statiques (HTML, CSS, JavaScript). Les données restent sur le téléphone (IndexedDB), sans compte.
+Aucune dépendance installée et aucune étape de build : ce sont des fichiers statiques (HTML, CSS, JavaScript). Les données sont d'abord sur le téléphone (IndexedDB) et, une fois connecté avec Google, sauvegardées automatiquement dans Firebase (Firestore).
 
 ## Ce que fait l'app
 
@@ -57,7 +57,16 @@ Ensuite, sur le téléphone :
 
 Après une modification, change `VERSION` dans `sw.js` (par exemple `wl-v2`) puis redéploie. Les téléphones récupèrent la nouvelle version au lancement suivant.
 
-## Sauvegarde
+## Sauvegarde en ligne (Firebase)
+
+- Connexion avec Google depuis l'accueil, l'onboarding ou Plus › Réglages.
+- Chaque modification part dans Firestore 1,5 s après, ou dès que l'app passe en arrière‑plan. Hors ligne, les envois attendent le retour du réseau.
+- À la connexion, le téléphone et le cloud sont fusionnés : un téléphone vidé récupère tout, et une séance supprimée ne revient pas.
+- Structure : `users/{uid}` (réglages, exercices, séances modèles, poids), puis `sessions`, `painLogs` et `photos` en sous‑collections.
+- Règles Firestore : seul l'utilisateur connecté lit et écrit sous `users/{son uid}`.
+- Le domaine `christoru-svg.github.io` doit être dans Authentication › Paramètres › Domaines autorisés.
+
+## Copie de secours
 
 Les données ne quittent pas le téléphone. Fais un export JSON de temps en temps (Réglages, puis Exporter), surtout avant de changer de téléphone ou de vider les données du navigateur.
 
@@ -70,6 +79,7 @@ manifest.webmanifest  installation PWA
 sw.js                 cache hors ligne
 js/app.js             écrans, séance en cours, bilan J+1
 js/store.js           stockage IndexedDB (état et photos séparés)
+js/cloud.js           connexion Google et synchronisation Firestore
 js/seed.js            programme de départ (A et B)
 js/pictos.js          pictogrammes et logo
 icons/                icônes de l'app
